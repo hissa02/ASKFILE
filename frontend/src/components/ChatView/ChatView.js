@@ -2,13 +2,13 @@ import React, { useRef } from 'react';
 import {
   MessageSquare,
   History,
-  LogOut,
   Upload,
   Send,
   Copy,
   FileText,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  RotateCcw
 } from 'lucide-react';
 import './ChatView.css';
 
@@ -76,16 +76,16 @@ const ChatView = ({
 
             <div className="user-info">
               <img 
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.name || user?.email || 'User')}&backgroundColor=0891b2&radius=50`}
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.name || 'User')}&backgroundColor=0891b2&radius=50`}
                 alt="Avatar do usuário" 
                 className="user-avatar"
                 onError={(e) => {
-                  e.target.src = `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(user?.name || user?.email || 'User')}&backgroundColor=0891b2`;
+                  e.target.src = `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(user?.name || 'User')}&backgroundColor=0891b2`;
                 }}
               />
               <div className="user-details">
                 <div className="user-name">
-                  {user?.name || user?.username || user?.email?.split('@')[0] || 'Usuário'}
+                  {user?.name || 'Usuário AskFile'}
                 </div>
                 <div className="user-role">
                   {uploadedFile ? 'Arquivo carregado' : 'Nenhum arquivo'}
@@ -94,9 +94,9 @@ const ChatView = ({
               <button
                 onClick={handleLogout}
                 className="header-button"
-                title="Sair"
+                title="Limpar dados"
               >
-                <LogOut size={20} />
+                <RotateCcw size={20} />
               </button>
             </div>
           </div>

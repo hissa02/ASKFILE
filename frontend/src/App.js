@@ -1,13 +1,11 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import LoginView from './components/LoginView/LoginView';
+import React, { useState, useCallback, useMemo } from 'react';
 import ChatView from './components/ChatView/ChatView';
 import HistoryView from './components/HistoryView/HistoryView';
 import './App.css';
 
 const AskFileSystem = () => {
   // === ESTADOS PRINCIPAIS DA APLICAÇÃO ===
-  const [user, setUser] = useState(null); 
-  const [currentView, setCurrentView] = useState('login'); 
+  const [currentView, setCurrentView] = useState('chat'); 
   const [chatMessages, setChatMessages] = useState([]); 
   const [currentMessage, setCurrentMessage] = useState(''); 
   const [isLoading, setIsLoading] = useState(false); 
@@ -19,6 +17,13 @@ const AskFileSystem = () => {
   // === CONFIGURAÇÕES ===
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+  // === USUÁRIO FICTÍCIO (sem autenticação) ===
+  const defaultUser = {
+    id: 1,
+    name: "Usuário AskFile",
+    email: "usuario@askfile.com"
+  };
+
   // === SUGESTÕES INICIAIS ===
   const quickSuggestions = useMemo(() => [
     "Resuma os principais pontos do documento",
@@ -27,49 +32,6 @@ const AskFileSystem = () => {
     "Há alguma conclusão ou resultado destacado?",
     "Quais dados numéricos são mencionados?"
   ], []);
-
-  // === EFFECT PARA CARREGAR USUÁRIO ===
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
-        setUser(userData);
-        setCurrentView('chat');
-      } catch (error) {
-        console.error('Erro ao carregar usuário salvo:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-    }
-  }, []);
-
-  // === FUNÇÕES DE AUTENTICAÇÃO ===
-  const onLoginSuccess = useCallback((userData, token) => {
-    console.log('Login Success - User:', userData, 'Token:', token);
-    
-    setUser(userData);
-    setCurrentView('chat');
-    
-    if (token) {
-      localStorage.setItem('token', token);
-    }
-    if (userData) {
-      localStorage.setItem('user', JSON.stringify(userData));
-    }
-  }, []);
-
-  const handleLogout = useCallback(() => {
-    setUser(null);
-    setChatMessages([]);
-    setUploadedFile(null);
-    setCurrentView('login');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    alert('Você foi desconectado.');
-  }, []);
 
   // === FUNÇÃO PARA MUDANÇA DE VIEW ===
   const handleViewChange = useCallback((newView) => {
@@ -115,25 +77,20 @@ const AskFileSystem = () => {
     setCurrentMessage('');
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          // Removemos a autenticação - será necessário ajustar o backend
         },
         body: JSON.stringify({ 
           question: questionToSend,
-          file_id: uploadedFile.id 
+          file_id: uploadedFile.id,
+          user_email: defaultUser.email // Enviamos email padrão
         }),
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          alert('Sessão expirada. Por favor, faça login novamente.');
-          handleLogout();
-          return;
-        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -165,7 +122,7 @@ const AskFileSystem = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentMessage, isLoading, chatMessages.length, API_BASE_URL, handleLogout, uploadedFile]);
+  }, [currentMessage, isLoading, chatMessages.length, API_BASE_URL, uploadedFile, defaultUser.email]);
 
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Enter' && !isLoading) {
@@ -198,12 +155,13 @@ const AskFileSystem = () => {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      // Adicionamos o email do usuário padrão
+      formData.append('user_email', defaultUser.email);
 
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          // Removemos a autenticação
         },
         body: formData,
       });
@@ -231,18 +189,16 @@ const AskFileSystem = () => {
     } finally {
       setFileProcessing(false);
     }
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, defaultUser.email]);
 
   // === FUNÇÕES DO HISTÓRICO ===
   const fetchUserHistory = useCallback(async () => {
-    if (!user) return;
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/api/history`, {
+      const response = await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
+          // Removemos a autenticação
         }
       });
       if (!response.ok) {
@@ -256,18 +212,19 @@ const AskFileSystem = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, API_BASE_URL]);
+  }, [API_BASE_URL, defaultUser.email]);
 
-  useEffect(() => {
-    if (user && currentView === 'history') {
-      fetchUserHistory();
-    }
-  }, [user, currentView, fetchUserHistory]);
+  // === FUNÇÃO DE LOGOUT (agora apenas limpa dados) ===
+  const handleLogout = useCallback(() => {
+    setChatMessages([]);
+    setUploadedFile(null);
+    setUserHistory([]);
+    alert('Dados limpos com sucesso.');
+  }, []);
 
   // === PROPS COMPARTILHADAS ===
   const sharedProps = {
-    user,
-    setUser,
+    user: defaultUser,
     currentView,
     setCurrentView: handleViewChange,
     chatMessages,
@@ -294,18 +251,7 @@ const AskFileSystem = () => {
     fetchUserHistory
   };
 
-  const loginProps = {
-    API_BASE_URL,
-    onLoginSuccess,
-    isLoading,
-    setIsLoading
-  };
-
   // === RENDERIZAÇÃO ===
-  if (!user) {
-    return <LoginView {...loginProps} />;
-  }
-
   switch (currentView) {
     case 'chat':
       return <ChatView {...sharedProps} />;
