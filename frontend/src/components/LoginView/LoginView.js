@@ -152,18 +152,26 @@ const LoginView = ({
     }
   };
 
-  // === GOOGLE LOGIN ===
+  // === GOOGLE LOGIN CORRIGIDO ===
   const handleGoogleSuccess = async (userData) => {
     setIsLoading(true);
     try {
       console.log('Google Login Success:', userData);
       
+      // Envia o token recebido do Google para o backend
       const response = await fetch(`${API_BASE_URL}/api/login/google`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify({
+          google_token: userData.google_token,
+          google_id: userData.google_id,
+          email: userData.email,
+          name: userData.name,
+          picture: userData.picture,
+          email_verified: userData.email_verified
+        }),
       });
       
       const data = await response.json();
@@ -171,6 +179,7 @@ const LoginView = ({
       if (response.ok) {
         onLoginSuccess(data.user, data.access_token);
       } else {
+        console.error('Erro do servidor:', data);
         alert('Erro no login com Google: ' + (data.detail || 'Erro desconhecido.'));
       }
     } catch (error) {
@@ -293,7 +302,6 @@ const LoginView = ({
                 </button>
                 
                 <GoogleLoginButton
-                  clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
                   disabled={isLoading}
