@@ -1,224 +1,298 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from typing import List, Optional
-from datetime import datetime
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from pydantic import BaseModel, EmailStr
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+from typing import Optional
+import os
+from dotenv import load_dotenv
 import logging
-from routes.login import get_current_active_user
+
+# Google Auth imports
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
+import google.auth.exceptions
+
+load_dotenv()
+
+# Configurações
+SECRET_KEY = os.getenv("SECRET_KEY", "bM613IFEBDOdAoputAckOOEh-rTwZSs932aAoyw2YfU")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 logger = logging.getLogger(__name__)
+
+# Configuração de criptografia
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# OAuth2 scheme
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
+
 router = APIRouter()
 
-# Modelos
-class ChatEntry(BaseModel):
+# Modelos Pydantic
+class UserCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+class UserResponse(BaseModel):
     id: int
-    question: str
-    answer: str
-    timestamp: datetime
-    sources: Optional[List[dict]] = []
+    name: str
+    email: str
+    created_at: datetime
 
-class SaveChatRequest(BaseModel):
-    question: str
-    answer: str
-    sources: Optional[List[dict]] = []
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
 
-# Armazenamento em memória do histórico
-user_history_store = {}
-message_id_counter = 1
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
+class GoogleLoginRequest(BaseModel):
+    google_token: str
+    google_id: Optional[str] = None
+    email: Optional[str] = None
+    name: Optional[str] = None
+    picture: Optional[str] = None
+    email_verified: Optional[bool] = None
+
+# Banco de dados em memória (para o AskFile simples)
+users_db = {
+    "admin@askfile.com": {
+        "id": 1,
+        "name": "Admin AskFile",
+        "email": "admin@askfile.com",
+        "hashed_password": pwd_context.hash("admin123"),
+        "created_at": datetime.now()
+    },
+    "demo@askfile.com": {
+        "id": 2,
+        "name": "Usuário Demo",
+        "email": "demo@askfile.com", 
+        "hashed_password": pwd_context.hash("demo123"),
+        "created_at": datetime.now()
+    }
+}
+
+next_user_id = 3
 
 # Funções auxiliares
-def get_user_history(user_email: str) -> List[dict]:
-    return user_history_store.get(user_email, [])
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
-def add_chat_entry(user_email: str, question: str, answer: str, sources: List[dict] = None) -> int:
-    global message_id_counter
-    
-    if user_email not in user_history_store:
-        user_history_store[user_email] = []
-    
-    new_entry = {
-        "id": message_id_counter,
-        "question": question,
-        "answer": answer,
-        "timestamp": datetime.now(),
-        "sources": sources or []
-    }
-    
-    user_history_store[user_email].append(new_entry)
-    message_id_counter += 1
-    
-    logger.info(f"Nova entrada adicionada ao histórico de {user_email}")
-    return new_entry["id"]
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
 
-def clear_user_history(user_email: str) -> bool:
-    if user_email in user_history_store:
-        user_history_store[user_email] = []
-        logger.info(f"Histórico limpo para usuário {user_email}")
-        return True
-    return False
+def get_user_by_email(email: str):
+    return users_db.get(email)
 
-def delete_chat_entry(user_email: str, entry_id: int) -> bool:
-    if user_email not in user_history_store:
+def authenticate_user(email: str, password: str):
+    user = get_user_by_email(email)
+    if not user:
         return False
+    if not verify_password(password, user["hashed_password"]):
+        return False
+    return user
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Credenciais inválidas",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(email=email)
+    except JWTError:
+        raise credentials_exception
     
-    user_history = user_history_store[user_email]
-    for i, entry in enumerate(user_history):
-        if entry["id"] == entry_id:
-            del user_history[i]
-            logger.info(f"Entrada {entry_id} removida do histórico de {user_email}")
-            return True
-    return False
+    user = get_user_by_email(email=token_data.email)
+    if user is None:
+        raise credentials_exception
+    return user
+
+async def get_current_active_user(current_user: dict = Depends(get_current_user)):
+    return current_user
 
 # Endpoints
-@router.get("", response_model=dict)
-async def get_history(current_user: dict = Depends(get_current_active_user)):
-    try:
-        user_email = current_user["email"]
-        history = get_user_history(user_email)
-        
-        # Converte datetime para string
-        serialized_history = []
-        for entry in history:
-            serialized_entry = {
-                "id": entry["id"],
-                "question": entry["question"],
-                "answer": entry["answer"],
-                "timestamp": entry["timestamp"].isoformat(),
-                "sources": entry["sources"]
-            }
-            serialized_history.append(serialized_entry)
-        
-        logger.info(f"Histórico recuperado para {user_email}: {len(history)} entradas")
-        
-        return {
-            "history": serialized_history,
-            "total_entries": len(history),
-            "user": user_email
-        }
-        
-    except Exception as e:
-        logger.error(f"Erro ao buscar histórico: {e}")
+@router.post("/register", response_model=UserResponse)
+async def register_user(user_data: UserCreate):
+    if get_user_by_email(user_data.email):
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro interno ao buscar histórico"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email já está registrado"
         )
+    
+    if len(user_data.password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A senha deve ter pelo menos 6 caracteres"
+        )
+    
+    if len(user_data.name.strip()) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="O nome deve ter pelo menos 2 caracteres"
+        )
+    
+    global next_user_id
+    
+    new_user = {
+        "id": next_user_id,
+        "name": user_data.name.strip(),
+        "email": user_data.email.lower(),
+        "hashed_password": get_password_hash(user_data.password),
+        "created_at": datetime.now()
+    }
+    
+    users_db[user_data.email.lower()] = new_user
+    next_user_id += 1
+    
+    logger.info(f"Novo usuário registrado: {user_data.email}")
+    
+    return UserResponse(
+        id=new_user["id"],
+        name=new_user["name"],
+        email=new_user["email"],
+        created_at=new_user["created_at"]
+    )
 
-@router.post("/save")
-async def save_chat(
-    chat_data: SaveChatRequest,
-    current_user: dict = Depends(get_current_active_user)
-):
+@router.post("/", response_model=Token)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(form_data.username.lower(), form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email ou senha incorretos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user["email"]}, expires_delta=access_token_expires
+    )
+    
+    logger.info(f"Login realizado: {user['email']}")
+    
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=UserResponse(
+            id=user["id"],
+            name=user["name"],
+            email=user["email"],
+            created_at=user["created_at"]
+        )
+    )
+
+@router.post("/google", response_model=Token)
+async def google_login(google_data: GoogleLoginRequest):
     try:
-        user_email = current_user["email"]
+        GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
         
-        if not chat_data.question.strip() or not chat_data.answer.strip():
+        if not GOOGLE_CLIENT_ID:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Pergunta e resposta são obrigatórias"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Google OAuth não configurado"
             )
         
-        entry_id = add_chat_entry(
-            user_email=user_email,
-            question=chat_data.question.strip(),
-            answer=chat_data.answer.strip(),
-            sources=chat_data.sources or []
+        # CORREÇÃO: Verificar se é um token mock para desenvolvimento
+        if google_data.google_token == "mock_google_token_123":
+            # Login mock para desenvolvimento
+            google_email = google_data.email or "demo.google@gmail.com"
+            google_name = google_data.name or "Usuário Google Demo"
+            google_user_id = google_data.google_id or "mock_google_id_456"
+            
+            logger.info(f"Login Google mock para desenvolvimento: {google_email}")
+            
+        else:
+            # Login real com Google
+            try:
+                idinfo = id_token.verify_oauth2_token(
+                    google_data.google_token, 
+                    google_requests.Request(), 
+                    GOOGLE_CLIENT_ID
+                )
+                
+                google_email = idinfo.get('email')
+                google_name = idinfo.get('name')
+                google_user_id = idinfo.get('sub')
+                
+                if not google_email:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Email não fornecido pelo Google"
+                    )
+                
+            except Exception as e:
+                logger.error(f"Erro na verificação do token Google: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token do Google inválido"
+                )
+        
+        user = get_user_by_email(google_email)
+        
+        if not user:
+            global next_user_id
+            user = {
+                "id": next_user_id,
+                "name": google_name or google_email.split('@')[0],
+                "email": google_email,
+                "hashed_password": get_password_hash(f"google_auth_{google_user_id}"),
+                "created_at": datetime.now(),
+                "google_id": google_user_id
+            }
+            users_db[google_email] = user
+            next_user_id += 1
+            logger.info(f"Novo usuário criado via Google: {google_email}")
+        
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user["email"]}, expires_delta=access_token_expires
         )
         
-        return {
-            "message": "Conversa salva com sucesso",
-            "entry_id": entry_id,
-            "user": user_email
-        }
+        return Token(
+            access_token=access_token,
+            token_type="bearer",
+            user=UserResponse(
+                id=user["id"],
+                name=user["name"],
+                email=user["email"],
+                created_at=user["created_at"]
+            )
+        )
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro ao salvar conversa: {e}")
+        logger.error(f"Erro no login Google: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro interno ao salvar conversa"
+            detail="Erro interno no login com Google"
         )
 
-@router.delete("/clear")
-async def clear_history(current_user: dict = Depends(get_current_active_user)):
-    try:
-        user_email = current_user["email"]
-        success = clear_user_history(user_email)
-        
-        if success:
-            return {
-                "message": "Histórico limpo com sucesso",
-                "user": user_email
-            }
-        else:
-            return {
-                "message": "Nenhum histórico encontrado para limpar",
-                "user": user_email
-            }
-            
-    except Exception as e:
-        logger.error(f"Erro ao limpar histórico: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro interno ao limpar histórico"
-        )
-
-@router.delete("/{entry_id}")
-async def delete_entry(
-    entry_id: int,
-    current_user: dict = Depends(get_current_active_user)
-):
-    try:
-        user_email = current_user["email"]
-        success = delete_chat_entry(user_email, entry_id)
-        
-        if success:
-            return {
-                "message": f"Entrada {entry_id} removida com sucesso",
-                "user": user_email
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Entrada não encontrada no histórico"
-            )
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Erro ao remover entrada: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro interno ao remover entrada"
-        )
-
-@router.get("/stats")
-async def get_history_stats(current_user: dict = Depends(get_current_active_user)):
-    try:
-        user_email = current_user["email"]
-        history = get_user_history(user_email)
-        
-        total_entries = len(history)
-        if total_entries == 0:
-            return {
-                "total_entries": 0,
-                "first_entry": None,
-                "last_entry": None,
-                "user": user_email
-            }
-        
-        first_entry = min(history, key=lambda x: x["timestamp"])
-        last_entry = max(history, key=lambda x: x["timestamp"])
-        
-        return {
-            "total_entries": total_entries,
-            "first_entry": first_entry["timestamp"].isoformat(),
-            "last_entry": last_entry["timestamp"].isoformat(),
-            "user": user_email
-        }
-        
-    except Exception as e:
-        logger.error(f"Erro ao buscar estatísticas: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro interno ao buscar estatísticas"
-        )
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(current_user: dict = Depends(get_current_active_user)):
+    return UserResponse(
+        id=current_user["id"],
+        name=current_user["name"],
+        email=current_user["email"],
+        created_at=current_user["created_at"]
+    )
