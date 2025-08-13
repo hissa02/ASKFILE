@@ -1,0 +1,22 @@
+# Ignorar arquivos de ambiente
+.env
+
+# Ignorar pastas de cache e compilados
+__pycache__/
+
+# Ignorar pastas de embeddings/vetorização 
+chroma/
+
+# Ignorar uploads de arquivos 
+uploads/
+
+# Ignorar arquivos específicos do Python
+*.pyc
+*.log
+.pytest_cache/
+.coverage
+
+# Ignorar ambientes virtuais
+venv/
+.venv/
+env/
