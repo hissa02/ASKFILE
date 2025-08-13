@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import os
 import logging
 from sentence_transformers import SentenceTransformer
-from pinecone import Pinecone
+from pinecone import Pinecone, ServerlessSpec
 from routes.login import get_current_active_user
 
 load_dotenv()
@@ -17,19 +17,46 @@ router = APIRouter()
 
 # Modelo de embedding
 try:
-    embedding_model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-mpnet-base-v2')
-    logger.info("Modelo de embedding para chat carregado")
+    embedding_model_name = os.getenv("EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
+    embedding_model = SentenceTransformer(embedding_model_name)
+    logger.info(f"Modelo de embedding carregado: {embedding_model_name}")
 except Exception as e:
-    logger.error(f"Erro ao carregar modelo de embedding para chat: {e}")
+    logger.error(f"Erro ao carregar modelo de embedding: {e}")
     embedding_model = None
 
-# Pinecone
+# Pinecone com configuração correta
 try:
-    pinecone_client = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-    pinecone_index = pinecone_client.Index(os.getenv("PINECONE_INDEX_NAME"))
-    logger.info("Pinecone para chat inicializado")
+    pinecone_api_key = os.getenv("PINECONE_API_KEY")
+    pinecone_index_name = os.getenv("PINECONE_INDEX_NAME", "askfile")
+    pinecone_host = os.getenv("PINECONE_HOST")
+    
+    if pinecone_api_key:
+        # Inicializa cliente Pinecone
+        pc = Pinecone(api_key=pinecone_api_key)
+        
+        # Conecta ao índice existente
+        if pinecone_host:
+            # Usa host específico se fornecido
+            pinecone_index = pc.Index(pinecone_index_name, host=pinecone_host)
+        else:
+            # Conecta usando apenas o nome do índice
+            pinecone_index = pc.Index(pinecone_index_name)
+        
+        logger.info(f"Pinecone conectado ao índice: {pinecone_index_name}")
+        
+        # Testa a conexão
+        try:
+            stats = pinecone_index.describe_index_stats()
+            logger.info(f"Estatísticas do índice: {stats}")
+        except Exception as e:
+            logger.warning(f"Não foi possível obter estatísticas do índice: {e}")
+            
+    else:
+        pinecone_index = None
+        logger.warning("PINECONE_API_KEY não configurado")
+        
 except Exception as e:
-    logger.error(f"Erro ao inicializar Pinecone para chat: {e}")
+    logger.error(f"Erro ao inicializar Pinecone: {e}")
     pinecone_index = None
 
 class ChatRequest(BaseModel):
@@ -49,16 +76,19 @@ def generate_query_embedding(text: str) -> list:
         logger.error(f"Erro ao gerar embedding da consulta: {e}")
         raise HTTPException(status_code=500, detail="Erro ao processar consulta")
 
-def search_in_pinecone(query_embedding: list, user_email: str, file_id: str = None, top_k: int = 10) -> list:
+def search_in_pinecone(query_embedding: list, user_email: str, file_id: str = None, top_k: int = 10) -> tuple:
     """Busca no Pinecone"""
     try:
         if not pinecone_index:
-            raise RuntimeError("Pinecone não disponível")
+            logger.warning("Pinecone não disponível, retornando resultados vazios")
+            return [], []
         
         # Filtros de busca
         filter_dict = {"user_email": user_email}
         if file_id:
             filter_dict["file_id"] = file_id
+        
+        logger.info(f"Buscando no Pinecone com filtros: {filter_dict}")
         
         # Busca vetorial
         query_results = pinecone_index.query(
@@ -67,6 +97,8 @@ def search_in_pinecone(query_embedding: list, user_email: str, file_id: str = No
             include_metadata=True,
             filter=filter_dict
         )
+        
+        logger.info(f"Pinecone retornou {len(query_results.matches)} resultados")
         
         # Processa resultados
         context_parts = []
@@ -77,6 +109,8 @@ def search_in_pinecone(query_embedding: list, user_email: str, file_id: str = No
             file_id_meta = match.metadata.get('file_id', 'Arquivo')
             score = match.score
             
+            logger.debug(f"Match encontrado - Score: {score:.3f}, Content length: {len(content)}")
+            
             if content.strip() and score > 0.3:  # Filtro de qualidade
                 context_parts.append(content)
                 sources.append({
@@ -85,10 +119,12 @@ def search_in_pinecone(query_embedding: list, user_email: str, file_id: str = No
                     'file_id': file_id_meta
                 })
         
+        logger.info(f"Contexto processado: {len(context_parts)} chunks válidos")
         return context_parts, sources
         
     except Exception as e:
         logger.error(f"Erro na busca Pinecone: {e}")
+        # Retorna resultados vazios em caso de erro, não falha
         return [], []
 
 @router.post("")
@@ -113,6 +149,10 @@ async def send_message(
         logger.info(f"Pergunta recebida de {user_email}: {question}")
         logger.info(f"Arquivo consultado: {file_id}")
 
+        # Verifica se serviços estão disponíveis
+        if not groq_client:
+            raise HTTPException(status_code=503, detail="Serviço de IA não disponível")
+
         # Gera embedding da pergunta
         question_embedding = generate_query_embedding(question)
 
@@ -125,14 +165,17 @@ async def send_message(
         )
 
         if not context_parts:
+            logger.warning(f"Nenhum contexto encontrado para pergunta: {question}")
             return {
-                'answer': "Desculpe, não encontrei informações relevantes no seu arquivo para responder essa pergunta. Tente reformular a pergunta ou verificar se o conteúdo está relacionado ao arquivo enviado.",
+                'answer': "Desculpe, não encontrei informações relevantes no seu arquivo para responder essa pergunta. Isso pode acontecer se:\n\n1. O arquivo ainda não foi completamente processado\n2. A pergunta não está relacionada ao conteúdo do arquivo\n3. Houve algum problema na indexação\n\nTente reformular a pergunta ou verificar se o conteúdo está relacionado ao arquivo enviado.",
                 'sources': [],
                 'context': '',
                 'debug_info': {
                     'chunks_found': 0,
                     'context_length': 0,
-                    'file_id': file_id
+                    'file_id': file_id,
+                    'user_email': user_email,
+                    'pinecone_available': pinecone_index is not None
                 }
             }
 
@@ -169,11 +212,11 @@ Resposta baseada no arquivo:"""
             )
             
             answer = response.choices[0].message.content
-            logger.info(f"Resposta gerada: {len(answer)} caracteres")
+            logger.info(f"Resposta gerada com Groq: {len(answer)} caracteres")
             
         except Exception as e:
             logger.error(f"Erro ao gerar resposta com Groq: {e}")
-            answer = "Desculpe, houve um erro ao processar sua pergunta. Tente novamente."
+            answer = "Desculpe, houve um erro ao processar sua pergunta com o serviço de IA. Tente novamente em alguns instantes."
 
         # Salva no histórico automaticamente
         try:
@@ -196,7 +239,10 @@ Resposta baseada no arquivo:"""
                 'chunks_found': len(context_parts),
                 'context_length': len(context),
                 'similarity_scores': [f"{s['score']:.3f}" for s in sources[:5]],
-                'file_id': file_id
+                'file_id': file_id,
+                'user_email': user_email,
+                'pinecone_available': pinecone_index is not None,
+                'groq_available': groq_client is not None
             }
         }
         
@@ -209,13 +255,35 @@ Resposta baseada no arquivo:"""
 @router.get("/status")
 async def chat_status():
     """Verifica status dos serviços de chat"""
+    
+    # Testa Pinecone
+    pinecone_status = False
+    pinecone_stats = None
+    if pinecone_index:
+        try:
+            pinecone_stats = pinecone_index.describe_index_stats()
+            pinecone_status = True
+        except Exception as e:
+            logger.error(f"Erro ao testar Pinecone: {e}")
+    
+    # Testa Groq
+    groq_status = groq_client is not None
+    
     status = {
         "embedding_model": embedding_model is not None,
-        "pinecone": pinecone_index is not None,
-        "groq": groq_client is not None
+        "pinecone": pinecone_status,
+        "groq": groq_status
     }
     
-    return {
+    response = {
         "status": "ok" if all(status.values()) else "partial",
-        "services": status
+        "services": status,
+        "details": {
+            "embedding_model": embedding_model_name if embedding_model else "Não carregado",
+            "pinecone_index": os.getenv("PINECONE_INDEX_NAME", "Não configurado"),
+            "pinecone_stats": pinecone_stats,
+            "groq_model": "llama3-8b-8192" if groq_status else "Não disponível"
+        }
     }
+    
+    return response
