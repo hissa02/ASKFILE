@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 const GoogleLoginButton = ({ 
   onSuccess, 
@@ -7,29 +7,106 @@ const GoogleLoginButton = ({
   buttonText = "Entrar com Google" 
 }) => {
   
-  const handleGoogleLogin = () => {
-    // Simulação do login com Google para desenvolvimento
-    // Em produção, seria integrado com a API real do Google
-    if (disabled) return;
-    
-    // Simula uma resposta de sucesso do Google
-    const mockGoogleResponse = {
-      google_token: "mock_google_token_123",
-      google_id: "mock_google_id_456",
-      email: "demo.google@gmail.com",
-      name: "Usuário Google Demo",
-      picture: "https://api.dicebear.com/7.x/avataaars/svg?seed=GoogleUser&backgroundColor=0891b2&radius=50",
-      email_verified: true
+  const GOOGLE_CLIENT_ID = "181758554375-gtm0d45516h9ij7cgvd787iemu24ds96.apps.googleusercontent.com";
+
+  useEffect(() => {
+    // Carrega a biblioteca do Google Identity Services
+    const loadGoogleScript = () => {
+      if (window.google) return;
+      
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        console.log('Google Identity Services carregado');
+      };
+      document.head.appendChild(script);
     };
     
-    // Simula um pequeno delay como se fosse uma requisição real
-    setTimeout(() => {
-      try {
-        onSuccess(mockGoogleResponse);
-      } catch (error) {
-        onError(error);
+    loadGoogleScript();
+  }, []);
+
+  const handleGoogleLogin = () => {
+    if (disabled) return;
+    
+    // Verifica se o Google Identity Services está carregado
+    if (!window.google) {
+      console.error('Google Identity Services não carregado');
+      onError(new Error('Google não carregado'));
+      return;
+    }
+    
+    try {
+      // Inicializa o Google OAuth usando One Tap
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+
+      // Exibe o prompt de login
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // Se o prompt não for exibido, usa o popup como fallback
+          window.google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: 'email profile',
+            callback: handleTokenResponse,
+          }).requestAccessToken();
+        }
+      });
+
+    } catch (error) {
+      console.error('Erro ao inicializar Google OAuth:', error);
+      onError(error);
+    }
+  };
+
+  const handleCredentialResponse = (response) => {
+    try {
+      console.log('Token recebido do Google:', response.credential);
+      
+      // Chama a função de sucesso com o token
+      onSuccess({
+        google_token: response.credential
+      });
+      
+    } catch (error) {
+      console.error('Erro ao processar resposta do Google:', error);
+      onError(error);
+    }
+  };
+
+  const handleTokenResponse = (response) => {
+    try {
+      console.log('Token OAuth recebido:', response);
+      
+      if (response.access_token) {
+        // Para tokens OAuth2, precisamos buscar as informações do usuário
+        fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${response.access_token}`)
+          .then(res => res.json())
+          .then(userInfo => {
+            onSuccess({
+              google_token: response.access_token,
+              email: userInfo.email,
+              name: userInfo.name,
+              picture: userInfo.picture,
+              google_id: userInfo.id,
+              email_verified: userInfo.verified_email
+            });
+          })
+          .catch(error => {
+            console.error('Erro ao buscar informações do usuário:', error);
+            onError(error);
+          });
       }
-    }, 1000);
+      
+    } catch (error) {
+      console.error('Erro ao processar token OAuth:', error);
+      onError(error);
+    }
   };
 
   return (
