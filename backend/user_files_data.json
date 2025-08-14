@@ -1,0 +1,30 @@
+{
+  "usuario@askfile.com": {
+    "20250813_416b9a26": {
+      "original_name": "historico_2021052405 (9).pdf",
+      "file_path": "user_files\\20250813_416b9a26_historico_2021052405 (9).pdf",
+      "summary": "Resumo:\n\nO documento é um histórico escolar emitido pela Pró-Reitoria de Ensino da Universidade Federal do Maranhão (UFMA), datado de 13 de agosto de 2025. O propósito principal é apresentar a trajetória acadêmica de Hissa Barbara Oliveira, estudante de Ciência e Tecnologia, bacharelado em Ciência e Tecnologia, com matrícula 2021052405.\n\nO documento apresenta informações sobre o curso, incluindo dados pessoais, histórico de componentes curriculares cursados e cursando, notas e situações (aprovado, reprovado, cancelado, etc.). Além disso, destaca-se a falta de habilidade do estudante para realizar o ENADE, em razão da natureza do curso. Outros pontos importantes incluem a aprovação em vários componentes curriculares, como Física Experimental, Química Geral e Inorgânica, e a reprovação em alguns componentes, como Mecânica dos Sólidos e Eletricidade Aplicada.\n\nEm resumo, o documento é um histórico escolar que apresenta a trajetória acadêmica de Hissa Barbara Oliveira, estudante de Ciência e Tecnologia na UFMA. O documento destaca a aprovação em vários componentes curriculares e a reprovação em alguns, além da falta de habilidade para realizar o ENADE.",
+      "upload_date": "2025-08-13T23:41:36.033616",
+      "file_size": 33700,
+      "chunks_count": 200,
+      "processing_result": {
+        "success": true,
+        "total_chunks": 200,
+        "vectors_inserted": 0
+      }
+    },
+    "20250813_c84d07da": {
+      "original_name": "TCC AMANDA CARVALHO DE SOUZA.pdf",
+      "file_path": "user_files\\20250813_c84d07da_TCC AMANDA CARVALHO DE SOUZA.pdf",
+      "summary": "O documento é uma monografia apresentada ao Curso de Engenharia de Software do Centro Universitário Unidade de Ensino Superior Dom Bosco, com o título \"Tecnologias educacionais para autistas: explorando ferramentas tecnológicas para apoiar o desenvolvimento social e comportamental\".\n\nA monografia explora a análise de aplicativos educacionais voltados para pessoas com Transtorno do Espectro Autista (TEA), investigando seus requisitos técnicos e potenciais melhorias. A pesquisa analisou três aplicativos principais, avaliando aspectos como funcionalidade, usabilidade, acessibilidade e adaptabilidade. Os resultados indicam que, embora esses aplicativos sejam eficazes na criação de rotinas estruturadas e no apoio ao desenvolvimento de habilidades de linguagem e cognição, há uma escassez significativa de recursos em português.\n\nA conclusão do estudo é que é necessário maior investimento na adaptação cultural e linguística desses aplicativos para melhor atender às necessidades dos usuários lusófonos, promovendo uma educação mais inclusiva e eficaz.",
+      "upload_date": "2025-08-13T23:45:25.041197",
+      "file_size": 1612915,
+      "chunks_count": 200,
+      "processing_result": {
+        "success": true,
+        "total_chunks": 200,
+        "vectors_inserted": 0
+      }
+    }
+  }
+}

@@ -81,12 +81,10 @@ const AskFileSystem = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Removemos a autenticação - será necessário ajustar o backend
         },
         body: JSON.stringify({ 
           question: questionToSend,
-          file_id: uploadedFile.id,
-          user_email: defaultUser.email // Enviamos email padrão
+          file_id: uploadedFile.id
         }),
       });
 
@@ -122,7 +120,7 @@ const AskFileSystem = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentMessage, isLoading, chatMessages.length, API_BASE_URL, uploadedFile, defaultUser.email]);
+  }, [currentMessage, isLoading, chatMessages.length, API_BASE_URL, uploadedFile]);
 
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Enter' && !isLoading) {
@@ -138,14 +136,14 @@ const AskFileSystem = () => {
     });
   }, []);
 
-  // === FUNÇÃO DE UPLOAD ===
+  // === FUNÇÃO DE UPLOAD CORRIGIDA ===
   const handleFileUpload = useCallback(async (file) => {
     if (!file) {
       alert("Nenhum arquivo selecionado.");
       return;
     }
 
-    if (!file.type === 'application/pdf') {
+    if (file.type !== 'application/pdf') {
       alert("Apenas arquivos PDF são aceitos.");
       return;
     }
@@ -155,14 +153,9 @@ const AskFileSystem = () => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      // Adicionamos o email do usuário padrão
-      formData.append('user_email', defaultUser.email);
 
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
-        headers: {
-          // Removemos a autenticação
-        },
         body: formData,
       });
 
@@ -189,7 +182,7 @@ const AskFileSystem = () => {
     } finally {
       setFileProcessing(false);
     }
-  }, [API_BASE_URL, defaultUser.email]);
+  }, [API_BASE_URL]);
 
   // === FUNÇÕES DO HISTÓRICO ===
   const fetchUserHistory = useCallback(async () => {
@@ -197,9 +190,6 @@ const AskFileSystem = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, {
         method: 'GET',
-        headers: {
-          // Removemos a autenticação
-        }
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
