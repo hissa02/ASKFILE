@@ -184,7 +184,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
     }
   }, [API_BASE_URL]);
 
-  // === FUNÇÕES DO HISTÓRICO ===
+  // === FUNÇÕES DO HISTÓRICO CORRIGIDAS ===
   const fetchUserHistory = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -195,7 +195,8 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      setUserHistory(data.history);
+      console.log('Histórico recebido:', data);
+      setUserHistory(data.history || []);
     } catch (error) {
       console.error('Erro ao buscar histórico:', error);
       setUserHistory([]);
@@ -204,13 +205,27 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
     }
   }, [API_BASE_URL, defaultUser.email]);
 
-  // === FUNÇÃO DE LOGOUT (agora apenas limpa dados) ===
-  const handleLogout = useCallback(() => {
+  // === FUNÇÃO DE LOGOUT CORRIGIDA ===
+  const handleLogout = useCallback(async () => {
+    try {
+      // Limpa o histórico no servidor
+      const response = await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        console.log('Histórico limpo no servidor');
+      }
+    } catch (error) {
+      console.error('Erro ao limpar histórico no servidor:', error);
+    }
+    
+    // Limpa dados locais
     setChatMessages([]);
     setUploadedFile(null);
     setUserHistory([]);
     alert('Dados limpos com sucesso.');
-  }, []);
+  }, [API_BASE_URL, defaultUser.email]);
 
   // === PROPS COMPARTILHADAS ===
   const sharedProps = {
