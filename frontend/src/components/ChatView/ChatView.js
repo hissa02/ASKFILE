@@ -1,3 +1,5 @@
+// === CHATVIEW.JS CORRIGIDO ===
+
 import React, { useRef } from 'react';
 import {
   MessageSquare,
@@ -28,18 +30,19 @@ const ChatView = ({
   handleKeyDown,
   copyToClipboard,
   handleFileUpload,
+  handleChangeFile, // NOVA PROP ADICIONADA
   uploadedFile,
   fileProcessing,
   fetchUserHistory
 }) => {
   const fileInputRef = useRef(null);
 
-  // Função para abrir o seletor de arquivos
+  // Função para abrir o seletor de arquivos (para primeiro upload)
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
-  // Função para processar arquivo selecionado
+  // Função para processar arquivo selecionado (para primeiro upload)
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -51,6 +54,16 @@ const ChatView = ({
     }
     // Limpa o input para permitir re-upload do mesmo arquivo
     event.target.value = '';
+  };
+
+  // CORREÇÃO: Função específica para trocar arquivo
+  const handleChangeFileClick = () => {
+    if (handleChangeFile) {
+      handleChangeFile();
+    } else {
+      // Fallback se a nova função não estiver disponível
+      handleUploadClick();
+    }
   };
 
   // Função para ir ao histórico
@@ -218,8 +231,9 @@ const ChatView = ({
                   </div>
                 </div>
 
+                {/* CORREÇÃO: Usar a nova função para trocar arquivo */}
                 <button
-                  onClick={handleUploadClick}
+                  onClick={handleChangeFileClick}
                   className="change-file-button"
                   disabled={fileProcessing}
                 >
@@ -305,11 +319,12 @@ const ChatView = ({
             <Database size={14} />
             <span>Consultando dados de: {uploadedFile.name}</span>
             <div>
+              {/* CORREÇÃO: Usar a nova função para trocar arquivo */}
               <button 
-                onClick={handleUploadClick}
+                onClick={handleChangeFileClick}
                 className="change-file-btn"
                 disabled={fileProcessing}
-                title="Processar outro arquivo"
+                title="Trocar arquivo"
               >
                 {fileProcessing ? 'Processando...' : 'Trocar'}
               </button>
@@ -373,7 +388,7 @@ const ChatView = ({
           </span>
         </div>
 
-        {/* Input oculto para upload */}
+        {/* Input oculto para upload (apenas para o primeiro upload) */}
         <input
           ref={fileInputRef}
           type="file"

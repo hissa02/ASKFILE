@@ -4,20 +4,20 @@ import HistoryView from './components/HistoryView/HistoryView';
 import './App.css';
 
 const AskFileSystem = () => {
-  // === ESTADOS PRINCIPAIS DA APLICAÇÃO ===
-  const [currentView, setCurrentView] = useState('chat'); 
-  const [chatMessages, setChatMessages] = useState([]); 
-  const [currentMessage, setCurrentMessage] = useState(''); 
-  const [isLoading, setIsLoading] = useState(false); 
-  const [userHistory, setUserHistory] = useState([]); 
-  const [suggestions, setSuggestions] = useState([]); 
-  const [uploadedFile, setUploadedFile] = useState(null); 
+  // === ESTADOS PRINCIPAIS ===
+  const [currentView, setCurrentView] = useState('chat');
+  const [chatMessages, setChatMessages] = useState([]);
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [userHistory, setUserHistory] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [uploadedFile, setUploadedFile] = useState(null);
   const [fileProcessing, setFileProcessing] = useState(false);
 
   // === CONFIGURAÇÕES ===
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.com';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.com';
 
-  // === USUÁRIO FICTÍCIO (sem autenticação) ===
+  // === USUÁRIO FICTÍCIO ===
   const defaultUser = {
     id: 1,
     name: "Usuário AskFile",
@@ -33,13 +33,13 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
     "Quais dados numéricos são mencionados?"
   ], []);
 
-  // === FUNÇÃO PARA MUDANÇA DE VIEW ===
+  // === TROCA DE VIEW ===
   const handleViewChange = useCallback((newView) => {
     console.log('Mudando para view:', newView);
     setCurrentView(newView);
   }, []);
 
-  // === FUNÇÕES DO CHAT ===
+  // === DIGITAÇÃO ===
   const handleInputChange = useCallback((event) => {
     setCurrentMessage(event.target.value);
     if (event.target.value === '') {
@@ -52,10 +52,10 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
     }
   }, [quickSuggestions]);
 
+  // === ENVIO DE MENSAGEM ===
   const handleSendMessage = useCallback(async () => {
     if (!currentMessage.trim() || isLoading) return;
 
-    // Verifica se há arquivo carregado
     if (!uploadedFile) {
       alert('Por favor, faça o upload de um arquivo PDF antes de fazer perguntas.');
       return;
@@ -79,18 +79,14 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
     try {
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           question: questionToSend,
           file_id: uploadedFile.id
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json();
       console.log("Resposta da API:", data);
@@ -111,7 +107,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
         ...prevMessages,
         {
           id: prevMessages.length + 2,
-          text: `Desculpe, não consegui obter uma resposta. Por favor, tente novamente. (Erro: ${error.message})`,
+          text: `Desculpe, não consegui obter uma resposta. (Erro: ${error.message})`,
           sender: 'bot',
           timestamp: new Date().toLocaleTimeString(),
           isError: true,
@@ -122,21 +118,21 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
     }
   }, [currentMessage, isLoading, chatMessages.length, API_BASE_URL, uploadedFile]);
 
+  // === ENTER PARA ENVIAR ===
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Enter' && !isLoading) {
       handleSendMessage();
     }
   }, [handleSendMessage, isLoading]);
 
+  // === COPIAR TEXTO ===
   const copyToClipboard = useCallback((text) => {
     navigator.clipboard.writeText(text).then(() => {
       alert('Texto copiado para a área de transferência!');
-    }).catch(err => {
-      console.error('Erro ao copiar texto: ', err);
-    });
+    }).catch(err => console.error('Erro ao copiar texto: ', err));
   }, []);
 
-  // === FUNÇÃO DE UPLOAD CORRIGIDA ===
+  // === UPLOAD CORRIGIDO ===
   const handleFileUpload = useCallback(async (file) => {
     if (!file) {
       alert("Nenhum arquivo selecionado.");
@@ -148,8 +144,14 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
       return;
     }
 
+    // Limpar dados anteriores antes do upload
+    setUploadedFile(null);
+    setChatMessages([]);
+    setCurrentMessage('');
+    setSuggestions([]);
+
     setFileProcessing(true);
-    
+
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -160,42 +162,67 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         setUploadedFile({
           id: data.file_id,
           name: file.name,
           summary: data.summary,
-          uploadDate: new Date().toISOString()
+          uploadDate: new Date().toISOString(),
+          isTemporary: data.file_removed || false
         });
-        
-        // Limpa mensagens antigas ao carregar novo arquivo
-        setChatMessages([]);
-        
+
         alert(`Arquivo "${file.name}" processado com sucesso!`);
+        console.log('Novo arquivo carregado:', file.name);
       } else {
         throw new Error(data.detail || `Erro ao processar arquivo: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Erro no upload:', error);
       alert(`Falha ao processar arquivo: ${error.message}`);
+      setUploadedFile(null);
+      setChatMessages([]);
     } finally {
       setFileProcessing(false);
     }
   }, [API_BASE_URL]);
 
-  // === FUNÇÕES DO HISTÓRICO CORRIGIDAS ===
+  // === TROCAR ARQUIVO ===
+  const handleChangeFile = useCallback(() => {
+    const confirmChange = window.confirm(
+      'Tem certeza que deseja trocar o arquivo?\n\n' +
+      'Isso irá:\n' +
+      '• Remover o arquivo atual\n' +
+      '• Limpar todas as mensagens do chat\n' +
+      '• Permitir o upload de um novo arquivo'
+    );
+
+    if (confirmChange) {
+      setUploadedFile(null);
+      setChatMessages([]);
+      setCurrentMessage('');
+      setSuggestions([]);
+
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.pdf';
+      fileInput.onchange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          handleFileUpload(file);
+        }
+      };
+      fileInput.click();
+    }
+  }, [handleFileUpload]);
+
+  // === HISTÓRICO ===
   const fetchUserHistory = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, {
-        method: 'GET',
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      const response = await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      console.log('Histórico recebido:', data);
       setUserHistory(data.history || []);
     } catch (error) {
       console.error('Erro ao buscar histórico:', error);
@@ -205,22 +232,14 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
     }
   }, [API_BASE_URL, defaultUser.email]);
 
-  // === FUNÇÃO DE LOGOUT CORRIGIDA ===
+  // === LOGOUT ===
   const handleLogout = useCallback(async () => {
     try {
-      // Limpa o histórico no servidor
-      const response = await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, {
-        method: 'DELETE',
-      });
-      
-      if (response.ok) {
-        console.log('Histórico limpo no servidor');
-      }
+      await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, { method: 'DELETE' });
     } catch (error) {
       console.error('Erro ao limpar histórico no servidor:', error);
     }
-    
-    // Limpa dados locais
+
     setChatMessages([]);
     setUploadedFile(null);
     setUserHistory([]);
@@ -250,6 +269,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.
     copyToClipboard,
     API_BASE_URL,
     handleFileUpload,
+    handleChangeFile,
     uploadedFile,
     setUploadedFile,
     fileProcessing,
