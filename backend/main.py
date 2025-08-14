@@ -5,30 +5,30 @@ import logging
 import os
 import time
 
-# IMPORTANTE: Importe também o módulo history
+# Importar módulos de rotas
 from routes import chat, upload, history
 
-# Carrega as variáveis de ambiente
+# Carrega variáveis de ambiente
 load_dotenv()
 
 # Cria a aplicação FastAPI
 app = FastAPI(
-    title="AskFile API", 
+    title="AskFile API",
     description="API para consultas inteligentes em PDFs - Processamento temporário de arquivos",
     version="2.0.0"
 )
 
-# Configuração do CORS - CORRIGIDA para incluir o novo domínio Vercel
+# === CONFIGURAÇÃO CORS ===
+allowed_origins = [
+    "http://localhost:3000",
+    "https://askfile-seven.vercel.app",
+    "https://askfile-onwqmm2yc-hissas-projects.vercel.app",
+    "https://askfile.onrender.com"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://askfile-seven.vercel.app",
-        "https://askfile-onwqmm2yc-hissas-projects.vercel.app",  # Novo domínio
-        "https://*.vercel.app",
-        "https://askfile.onrender.com",
-        "*"  # Permite qualquer origem durante desenvolvimento
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,7 +42,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Inclusão das rotas (AGORA COM history)
+# Inclusão das rotas
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
 app.include_router(history.router, prefix="/api/history", tags=["History"])
@@ -56,7 +56,7 @@ async def health_check():
         "version": "2.0.0",
         "features": [
             "Upload temporário de PDFs",
-            "Chat com IA sobre documentos", 
+            "Chat com IA sobre documentos",
             "Histórico de conversas",
             "Processamento sem armazenamento permanente"
         ],
@@ -101,6 +101,4 @@ async def log_requests(request, call_next):
 if __name__ == "__main__":
     import uvicorn
     logger.info("=== Iniciando AskFile API v2.0 ===")
-    logger.info("Modo: Processamento temporário sem autenticação")
-    logger.info("Recursos: Upload PDF + Chat IA + Histórico em memória")
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
