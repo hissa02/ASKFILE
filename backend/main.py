@@ -5,8 +5,8 @@ import logging
 import os
 import time
 
-# IMPORTANTE: Importe apenas os módulos que existem e funcionam
-from routes import chat, upload
+# IMPORTANTE: Importe também o módulo history
+from routes import chat, upload, history
 
 # Carrega as variáveis de ambiente
 load_dotenv()
@@ -40,9 +40,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Inclusão das rotas (SEM login e history)
+# Inclusão das rotas (AGORA COM history)
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
+app.include_router(history.router, prefix="/api/history", tags=["History"])
 
 # Rota de verificação de status
 @app.get("/")
@@ -57,7 +58,7 @@ async def health_check():
             "Histórico de conversas",
             "Processamento sem armazenamento permanente"
         ],
-        "services": ["chat", "upload"],
+        "services": ["chat", "upload", "history"],
         "storage_mode": "temporary_processing",
         "authentication": "disabled"
     }

@@ -19,6 +19,8 @@ DEFAULT_USER_EMAIL = "usuario@askfile.com"
 
 # Armazenamento simples em memória
 text_storage = {}
+# ADICIONADO: Armazenamento do histórico
+history_storage = {}
 
 class ChatRequest(BaseModel):
     question: str
@@ -173,6 +175,34 @@ def smart_text_search(query: str, file_id: str, user_email: str, max_results: in
         logger.error(f"Erro na busca: {e}")
         return [], []
 
+# ADICIONADO: Função para salvar no histórico
+def save_to_history(user_email: str, question: str, answer: str, sources: list, file_id: str = None):
+    """Salva pergunta e resposta no histórico"""
+    try:
+        if user_email not in history_storage:
+            history_storage[user_email] = []
+        
+        history_item = {
+            "question": question,
+            "answer": answer,
+            "sources": sources,
+            "file_id": file_id,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        history_storage[user_email].append(history_item)
+        
+        # Limita o histórico a 50 itens por usuário
+        if len(history_storage[user_email]) > 50:
+            history_storage[user_email] = history_storage[user_email][-50:]
+        
+        logger.info(f"Item salvo no histórico para {user_email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Erro ao salvar histórico: {e}")
+        return False
+
 @router.post("")
 async def send_message(request: ChatRequest = Body(...)):
     """
@@ -206,8 +236,13 @@ async def send_message(request: ChatRequest = Body(...)):
 
         if not context_parts:
             logger.warning(f"Nenhum contexto encontrado para: {question}")
+            answer = "Desculpe, não encontrei informações relevantes no seu arquivo para responder essa pergunta.\n\n**Dicas para melhor resultado:**\n\n1. Use palavras-chave específicas do documento\n2. Tente reformular a pergunta de forma mais direta\n3. Verifique se o conteúdo está relacionado ao arquivo enviado\n\nExemplo: Em vez de 'me fale sobre isso', pergunte 'quais são os principais resultados?' ou 'qual é a conclusão?'"
+            
+            # ADICIONADO: Salva no histórico mesmo quando não encontra contexto
+            save_to_history(user_email, question, answer, [], file_id)
+            
             return {
-                'answer': "Desculpe, não encontrei informações relevantes no seu arquivo para responder essa pergunta.\n\n**Dicas para melhor resultado:**\n\n1. Use palavras-chave específicas do documento\n2. Tente reformular a pergunta de forma mais direta\n3. Verifique se o conteúdo está relacionado ao arquivo enviado\n\nExemplo: Em vez de 'me fale sobre isso', pergunte 'quais são os principais resultados?' ou 'qual é a conclusão?'",
+                'answer': answer,
                 'sources': [],
                 'context': '',
                 'debug_info': {
@@ -258,6 +293,9 @@ RESPOSTA:"""
             logger.error(f"Erro ao gerar resposta com Groq: {e}")
             answer = "Desculpe, houve um erro ao processar sua pergunta. Tente novamente em alguns instantes."
 
+        # ADICIONADO: Salva no histórico
+        save_to_history(user_email, question, answer, sources, file_id)
+
         return {
             'answer': answer,
             'sources': sources,
@@ -291,17 +329,24 @@ async def chat_status():
             "groq": groq_status,
             "text_search": True,
             "storage": True,
-            "llm_semantic_expansion": groq_status
+            "llm_semantic_expansion": groq_status,
+            "history": True
         },
         "details": {
             "groq_model": "llama3-8b-8192" if groq_status else "Não disponível",
             "search_type": "llm_semantic_search",
             "storage_type": "in_memory",
-            "files_indexed": storage_files
+            "files_indexed": storage_files,
+            "history_users": len(history_storage)
         }
     }
     
     return response
+
+# ADICIONADO: Função para obter histórico
+def get_user_history(user_email: str) -> list:
+    """Obtém o histórico do usuário"""
+    return history_storage.get(user_email, [])
 
 # Função auxiliar para salvar chunks (usada pelo upload.py)
 def save_text_chunks(file_id: str, chunks: list, user_email: str = DEFAULT_USER_EMAIL):

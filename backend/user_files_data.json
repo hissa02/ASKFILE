@@ -75,6 +75,22 @@
         "min_chunk_size": 162,
         "max_chunk_size": 998
       }
+    },
+    "20250814_51c8ce9a": {
+      "original_name": "TCC-EMILLY REIS.pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento é uma monografia de conclusão de curso de bacharelado em Ciência e Tecnologia, apresentada por Emilly Vitória Ferreira Reis, com o título \"Frequência de anomalias nucleares em tubarões lixa da Costa Amazônica Brasileira\". O objetivo principal do estudo é avaliar a frequência de anomalias nucleares (micronúcleo, brotamento nuclear e núcleo bilobado) em brânquias de tubarões lixa capturados na Costa Amazônica Brasileira, como indicativo de possíveis efeitos genotóxicos.\n\nA monografia é composta por várias seções, incluindo uma introdução, uma seção de métodos, resultados e discussão, e uma seção de conclusões. Os principais tópicos abordados incluem a importância da espécie Ginglymostoma cirratum como bioindicadora da poluição costeira, a frequência de anomalias nucleares em brânquias de tubarões lixa e a presença de mecanismos celulares de reparo genético eficientes.\n\nOs dados importantes incluem a frequência inferior a 5% de anomalias nucleares em brânquias de tubarões lixa, sem diferença estatística significativa entre os grupos etários. Além disso, a monografia destaca a importância dos biomarcadores celulares no monitoramento ambiental e a necessidade de estudos futuros para melhor compreender a fisiologia da espécie G. cirratum e suas limitações como bioindicadora da poluição costeira.\n\nEm resumo, a monografia apresenta um estudo que avalia a frequência de anomalias nucleares em brânquias de tubarões lixa da Costa Amazônica Brasileira e destaca a importância da espécie como bioindicadora da poluição costeira. Os resultados sugerem a presença de mecanismos celulares de reparo genético eficientes e a necessidade de estudos futuros para melhor compreender a fisiologia da espécie e suas limitações como bioindicadora.",
+      "upload_date": "2025-08-14T03:07:59.140718",
+      "file_size": 2212402,
+      "chunks_count": 53,
+      "text_length": 36879,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 26,
+        "avg_chunk_size": 764,
+        "min_chunk_size": 162,
+        "max_chunk_size": 998
+      }
     }
   }
 }
