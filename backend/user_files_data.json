@@ -43,6 +43,38 @@
       "file_size": 1612915,
       "chunks_count": 100,
       "text_length": 47709
+    },
+    "20250814_daac24a0": {
+      "original_name": "TCC-EMILLY REIS.pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento é uma monografia apresentada ao Curso de Bacharelado Interdisciplinar em Ciência e Tecnologia da Universidade Federal do Maranhão, com o objetivo de avaliar a frequência de anomalias nucleares em tubarões lixa (Ginglymostoma cirratum) capturados na Costa Amazônica Brasileira.\n\nA monografia é composta por várias seções, incluindo a introdução, metodologia, resultados e discussão. A seção de resultados apresenta os dados coletados em 14 indivíduos adultos e 11 embriões de tubarões lixa, analisados para detectar anomalias nucleares, como micronúcleos, brotamento nuclear e núcleos bilobados. Os resultados mostraram uma frequência inferior a 5% de anomalias nucleares, sem diferenças estatisticamente significantes entre os grupos etários.\n\nOs principais dados importantes incluem a frequência de anomalias nucleares, a presença de mecanismos de reparo genético eficientes e a baixa expressão de danos genotóxicos. A discussão destaca a importância dos biomarcadores celulares no monitoramento ambiental e a limitação da espécie G. cirratum como bioindicadora da poluição costeira.\n\nEm resumo, a monografia apresenta um estudo sobre a frequência de anomalias nucleares em tubarões lixa, com resultados que sugerem a presença de mecanismos de reparo genético eficientes e a baixa expressão de danos genotóxicos.",
+      "upload_date": "2025-08-14T02:39:43.141340",
+      "file_size": 2212402,
+      "chunks_count": 53,
+      "text_length": 36879,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 26,
+        "avg_chunk_size": 764,
+        "min_chunk_size": 162,
+        "max_chunk_size": 998
+      }
+    },
+    "20250814_ca8f6659": {
+      "original_name": "TCC-EMILLY REIS.pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento é uma monografia de conclusão de curso de bacharelado em Ciência e Tecnologia, intitulada \"Frequência de anomalias nucleares em tubarões lixa da Costa Amazônica Brasileira\". O objetivo principal do estudo é avaliar a frequência de anomalias nucleares em brânquias de tubarões lixa capturados na Costa Amazônica Brasileira, como indicativo de possíveis efeitos genotóxicos.\n\nA monografia é composta por várias seções, incluindo uma introdução, uma seção de resultados e uma seção de discussão. Os resultados mostram que a frequência de anomalias nucleares é inferior a 5% e não há diferenças estatisticamente significantes entre os grupos etários. Além disso, os dados sugerem a presença de mecanismos celulares de reparo genético eficientes, que podem contribuir para a baixa expressão de danos genotóxicos.\n\nOs principais dados importantes incluem a análise de 14 indivíduos adultos e 11 embriões de tubarões lixa, coletados na região do Canal do Navio, baía de São Marcos, Maranhão. A contagem de células foi realizada em 1.000 células por indivíduo. A frequência de anomalias nucleares foi avaliada em relação a micronúcleos, brotamento nuclear e núcleos bilobados.\n\nEm resumo, a monografia apresenta um estudo que avalia a frequência de anomalias nucleares em tubarões lixa da Costa Amazônica Brasileira e sugere a presença de mecanismos celulares de reparo genético eficientes. Os resultados podem ser úteis para consultas futuras sobre a genotoxicidade e a fisiologia de Ginglymostoma cirratum, bem como para a monitoração ambiental e a avaliação da poluição costeira.",
+      "upload_date": "2025-08-14T02:47:28.538097",
+      "file_size": 2212402,
+      "chunks_count": 53,
+      "text_length": 36879,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 26,
+        "avg_chunk_size": 764,
+        "min_chunk_size": 162,
+        "max_chunk_size": 998
+      }
     }
   }
 }
