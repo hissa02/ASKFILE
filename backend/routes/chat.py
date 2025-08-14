@@ -24,8 +24,58 @@ class ChatRequest(BaseModel):
     question: str
     file_id: str = None
 
+def generate_search_terms(query: str) -> list:
+    """Usa o LLM para gerar termos de busca alternativos"""
+    try:
+        if not groq_client:
+            return [query.lower()]
+        
+        prompt = f"""Dado esta pergunta: "{query}"
+
+Gere uma lista de termos e frases alternativas para buscar no documento. Inclua:
+- Sinônimos das palavras principais
+- Variações da pergunta
+- Palavras-chave relacionadas
+- Termos técnicos equivalentes
+
+Exemplo:
+Pergunta: "quem fez o TCC?"
+Termos: autor, autora, quem escreveu, quem desenvolveu, nome do estudante, aluno, pesquisador, TCC, monografia, trabalho de conclusão, trabalho final
+
+Para a pergunta "{query}", liste apenas os termos separados por vírgula:"""
+
+        response = groq_client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.3
+        )
+        
+        terms_text = response.choices[0].message.content
+        
+        # Extrai os termos
+        terms = [term.strip().lower() for term in terms_text.split(',') if term.strip()]
+        
+        # Adiciona a query original
+        terms.insert(0, query.lower())
+        
+        # Remove duplicatas mantendo ordem
+        seen = set()
+        unique_terms = []
+        for term in terms:
+            if term not in seen and len(term) >= 3:
+                seen.add(term)
+                unique_terms.append(term)
+        
+        logger.info(f"Termos gerados para '{query}': {unique_terms[:10]}")
+        return unique_terms[:15]  # Limita a 15 termos
+        
+    except Exception as e:
+        logger.error(f"Erro ao gerar termos de busca: {e}")
+        return [query.lower()]
+
 def smart_text_search(query: str, file_id: str, user_email: str, max_results: int = 8) -> tuple:
-    """Busca inteligente por texto usando palavras-chave e contexto"""
+    """Busca inteligente por texto usando LLM para expandir termos"""
     try:
         # Verifica se há dados para este usuário e arquivo
         storage_key = f"{user_email}_{file_id}"
@@ -38,11 +88,10 @@ def smart_text_search(query: str, file_id: str, user_email: str, max_results: in
         if not chunks:
             return [], []
         
-        # Prepara a consulta
-        query_lower = query.lower()
-        query_words = [word.strip() for word in query_lower.split() if len(word.strip()) > 2]
+        # Gera termos de busca usando LLM
+        search_terms = generate_search_terms(query)
         
-        if not query_words:
+        if not search_terms:
             return [], []
         
         scored_chunks = []
@@ -50,40 +99,56 @@ def smart_text_search(query: str, file_id: str, user_email: str, max_results: in
         for i, chunk in enumerate(chunks):
             chunk_lower = chunk.lower()
             score = 0
+            matched_terms = []
             
-            # Pontuação por palavras exatas
-            for word in query_words:
-                word_count = chunk_lower.count(word)
-                if word_count > 0:
-                    score += word_count * 2  # Peso maior para matches exatos
+            # Busca por cada termo gerado
+            for term_idx, term in enumerate(search_terms):
+                term_count = chunk_lower.count(term)
+                if term_count > 0:
+                    # Primeiro termo (query original) tem peso maior
+                    weight = 3.0 if term_idx == 0 else max(2.0 - (term_idx * 0.1), 0.5)
+                    score += term_count * weight
+                    matched_terms.append(term)
             
-            # Pontuação por palavras similares (raiz da palavra)
-            for word in query_words:
-                if len(word) > 4:
-                    word_root = word[:4]
-                    similar_matches = len(re.findall(rf'\b{word_root}\w*', chunk_lower))
-                    score += similar_matches * 0.5
+            # Busca por variações das palavras (prefixos)
+            for term in search_terms[:5]:  # Só os 5 primeiros termos
+                if len(term) > 4:
+                    term_root = term[:4]
+                    similar_matches = len(re.findall(rf'\b{term_root}\w*', chunk_lower))
+                    score += similar_matches * 0.3
             
-            # Pontuação por proximidade das palavras
-            if len(query_words) > 1:
-                for i in range(len(query_words) - 1):
-                    word1, word2 = query_words[i], query_words[i + 1]
-                    if word1 in chunk_lower and word2 in chunk_lower:
-                        pos1 = chunk_lower.find(word1)
-                        pos2 = chunk_lower.find(word2)
+            # Proximidade entre termos
+            if len(search_terms) > 1:
+                for i_term in range(min(3, len(search_terms) - 1)):  # Só os 3 primeiros
+                    term1, term2 = search_terms[i_term], search_terms[i_term + 1]
+                    if term1 in chunk_lower and term2 in chunk_lower:
+                        pos1 = chunk_lower.find(term1)
+                        pos2 = chunk_lower.find(term2)
                         distance = abs(pos1 - pos2)
-                        if distance < 100:  # Palavras próximas
+                        if distance < 100:
                             score += 1.5
+                            matched_terms.append("proximidade")
             
-            # Adiciona bonus se o chunk contém a pergunta como um todo
-            if len(query_lower) > 10 and query_lower in chunk_lower:
-                score += 5
+            # Bonus para chunks com múltiplos termos
+            unique_terms_found = len(set(term for term in search_terms if term in chunk_lower))
+            if unique_terms_found > 1:
+                score += unique_terms_found * 1.2
+                matched_terms.append(f"multi_terms_{unique_terms_found}")
+            
+            # Busca por números
+            numbers_in_query = re.findall(r'\b\d+\b', query)
+            if numbers_in_query:
+                for num in numbers_in_query:
+                    if num in chunk:
+                        score += 3
+                        matched_terms.append(f"numero_{num}")
             
             if score > 0:
                 scored_chunks.append({
                     'content': chunk,
                     'score': score,
-                    'index': i
+                    'index': i,
+                    'matched_terms': matched_terms[:8]
                 })
         
         # Ordena por score e pega os melhores
@@ -94,10 +159,14 @@ def smart_text_search(query: str, file_id: str, user_email: str, max_results: in
         sources = [{
             'content': chunk['content'][:200] + "..." if len(chunk['content']) > 200 else chunk['content'],
             'score': round(chunk['score'], 2),
-            'file_id': file_id
+            'file_id': file_id,
+            'matched_terms': chunk['matched_terms']
         } for chunk in best_chunks]
         
-        logger.info(f"Busca inteligente retornou {len(context_parts)} resultados para: '{query}'")
+        logger.info(f"Busca com LLM retornou {len(context_parts)} resultados para: '{query}'")
+        if best_chunks:
+            logger.info(f"Melhor score: {best_chunks[0]['score']:.2f}")
+        
         return context_parts, sources
         
     except Exception as e:
@@ -127,7 +196,7 @@ async def send_message(request: ChatRequest = Body(...)):
         if not groq_client:
             raise HTTPException(status_code=503, detail="Serviço de IA não disponível")
 
-        # Busca contexto relevante usando busca inteligente
+        # Busca contexto relevante usando busca inteligente com LLM
         context_parts, sources = smart_text_search(
             query=question,
             file_id=file_id,
@@ -145,7 +214,7 @@ async def send_message(request: ChatRequest = Body(...)):
                     'chunks_found': 0,
                     'context_length': 0,
                     'file_id': file_id,
-                    'search_type': 'smart_text_search'
+                    'search_type': 'llm_semantic_search'
                 }
             }
 
@@ -198,7 +267,7 @@ RESPOSTA:"""
                 'context_length': len(context),
                 'best_scores': [s['score'] for s in sources[:3]],
                 'file_id': file_id,
-                'search_type': 'smart_text_search',
+                'search_type': 'llm_semantic_search',
                 'groq_available': True
             }
         }
@@ -221,11 +290,12 @@ async def chat_status():
         "services": {
             "groq": groq_status,
             "text_search": True,
-            "storage": True
+            "storage": True,
+            "llm_semantic_expansion": groq_status
         },
         "details": {
             "groq_model": "llama3-8b-8192" if groq_status else "Não disponível",
-            "search_type": "smart_text_search",
+            "search_type": "llm_semantic_search",
             "storage_type": "in_memory",
             "files_indexed": storage_files
         }
@@ -244,9 +314,9 @@ def save_text_chunks(file_id: str, chunks: list, user_email: str = DEFAULT_USER_
             'total_chunks': len(chunks)
         }
         
-        logger.info(f"✅ Salvos {len(chunks)} chunks para arquivo {file_id}")
+        logger.info(f" Salvos {len(chunks)} chunks para arquivo {file_id}")
         return True
         
     except Exception as e:
-        logger.error(f"❌ Erro ao salvar chunks: {e}")
+        logger.error(f" Erro ao salvar chunks: {e}")
         return False
