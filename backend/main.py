@@ -1,10 +1,9 @@
-# backend/main.py - Versão CORRIGIDA sem dependências de login
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import logging
 import os
+import time
 
 # IMPORTANTE: Importe apenas os módulos que existem e funcionam
 from routes import chat, upload
@@ -19,11 +18,12 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Configuração do CORS
+# Configuração do CORS - CORRIGIDA para Vercel
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "https://askfile-seven.vercel.app",  # Seu domínio específico
         "https://*.vercel.app",
         "https://askfile-production.up.railway.app"
     ],
@@ -71,11 +71,11 @@ async def system_info():
         "description": "Sistema de consultas inteligentes em PDFs",
         "storage_policy": {
             "files": "Processamento temporário - arquivos removidos após indexação",
-            "embeddings": "Armazenados no Pinecone para consultas",
+            "embeddings": "Armazenamento em memória para consultas",
             "history": "Mantido em memória durante a sessão"
         },
         "supported_formats": ["PDF"],
-        "max_file_size": "50MB",
+        "max_file_size": "25MB",
         "features": {
             "ai_chat": True,
             "document_analysis": True,
@@ -97,7 +97,6 @@ async def log_requests(request, call_next):
 # Execução local
 if __name__ == "__main__":
     import uvicorn
-    import time
     logger.info("=== Iniciando AskFile API v2.0 ===")
     logger.info("Modo: Processamento temporário sem autenticação")
     logger.info("Recursos: Upload PDF + Chat IA + Histórico em memória")
