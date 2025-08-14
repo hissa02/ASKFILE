@@ -16,7 +16,14 @@ router = APIRouter()
 # Configurações
 UPLOAD_DIR = "user_files"
 USER_DATA_FILE = "user_files_data.json"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Garante que o diretório existe
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    logger.info(f"✅ Diretório de upload: {os.path.abspath(UPLOAD_DIR)}")
+except Exception as e:
+    logger.error(f"❌ Erro ao criar diretório: {e}")
+
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25MB para ser mais leve
 
 # Email padrão
@@ -215,20 +222,42 @@ async def upload_file(file: UploadFile = File(...)):
         file_id = f"{datetime.now().strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
         file_path = os.path.join(UPLOAD_DIR, f"{file_id}_{file.filename}")
         
-        # Salva arquivo
+        # Salva arquivo com verificação adicional
         file_size = 0
-        with open(file_path, "wb") as buffer:
-            while chunk := await file.read(8192):
-                file_size += len(chunk)
-                if file_size > MAX_FILE_SIZE:
+        try:
+            with open(file_path, "wb") as buffer:
+                while chunk := await file.read(8192):
+                    file_size += len(chunk)
+                    if file_size > MAX_FILE_SIZE:
+                        # Remove arquivo se muito grande
+                        try:
+                            os.remove(file_path)
+                        except:
+                            pass
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail=f"Arquivo muito grande. Máximo: {MAX_FILE_SIZE//(1024*1024)}MB"
+                        )
+                    buffer.write(chunk)
+                    
+            logger.info(f"✅ Arquivo salvo: {file_path} ({file_size:,} bytes)")
+            
+            # Verifica se o arquivo foi realmente criado
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"Arquivo não foi criado: {file_path}")
+                
+        except Exception as save_error:
+            logger.error(f"❌ Erro ao salvar arquivo: {save_error}")
+            # Tenta remover arquivo parcial
+            try:
+                if os.path.exists(file_path):
                     os.remove(file_path)
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail=f"Arquivo muito grande. Máximo: {MAX_FILE_SIZE//(1024*1024)}MB"
-                    )
-                buffer.write(chunk)
-        
-        logger.info(f"📁 Arquivo salvo: {file_path} ({file_size:,} bytes)")
+            except:
+                pass
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Erro ao salvar arquivo: {str(save_error)}"
+            )
         
         # Processa PDF
         text_content = extract_text_from_pdf(file_path)
