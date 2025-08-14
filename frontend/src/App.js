@@ -15,7 +15,7 @@ const AskFileSystem = () => {
   const [fileProcessing, setFileProcessing] = useState(false);
 
   // === CONFIGURAÇÕES ===
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile-production.up.railway.app';
 
   // === USUÁRIO FICTÍCIO (sem autenticação) ===
   const defaultUser = {
