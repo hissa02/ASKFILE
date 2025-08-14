@@ -91,6 +91,22 @@
         "min_chunk_size": 162,
         "max_chunk_size": 998
       }
+    },
+    "20250814_67109ba5": {
+      "original_name": "historico_2021052405 (9).pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento é um histórico escolar emitido pela Pró-Reitoria de Ensino (PROEN) da Universidade Federal do Maranhão (UFMA), datado de 13 de agosto de 2025. O objetivo principal do documento é fornecer informações sobre o histórico acadêmico de Hissa Barbara Oliveira, estudante do curso de Ciência e Tecnologia - Bacharelado em Ciência e Tecnologia, com matrícula 2021052405.\n\nO documento é composto por várias seções, incluindo dados pessoais, informações sobre o curso, componentes curriculares cursados e cursando, e histórico de aprovação e reprovação em cada componente curricular. Os principais tópicos abordados incluem a lista de componentes curriculares cursados e cursando, com informações sobre a turma, situação, frequência, nota e data de aprovação ou reprovação.\n\nOs dados importantes incluem a lista de componentes curriculares cursados e cursando, com informações sobre a turma, situação, frequência, nota e data de aprovação ou reprovação. Além disso, o documento destaca a aprovação de Hissa Barbara Oliveira em vários componentes curriculares, incluindo Ciência, Tecnologia e Sociedade, Desenho Computacional, Química Geral e Inorgânica, e Física Experimental II, entre outros. No entanto, também há componentes curriculares que foram reprovidos, como Química Experimental e Equações Diferenciais I.\n\nEm resumo, o documento é um histórico escolar importante para Hissa Barbara Oliveira, estudante da UFMA, que destaca sua progressão acadêmica e aprovação em vários componentes curriculares. O documento pode ser útil para consultas futuras, fornecendo informações importantes sobre o histórico acadêmico da estudante.",
+      "upload_date": "2025-08-14T03:25:31.422837",
+      "file_size": 33700,
+      "chunks_count": 13,
+      "text_length": 10129,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 3,
+        "avg_chunk_size": 889,
+        "min_chunk_size": 425,
+        "max_chunk_size": 984
+      }
     }
   }
 }

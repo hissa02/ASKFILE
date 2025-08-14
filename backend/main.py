@@ -18,14 +18,16 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Configuração do CORS - CORRIGIDA para Vercel
+# Configuração do CORS - CORRIGIDA para incluir o novo domínio Vercel
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://askfile-seven.vercel.app",  # Seu domínio específico
+        "https://askfile-seven.vercel.app",
+        "https://askfile-onwqmm2yc-hissas-projects.vercel.app",  # Novo domínio
         "https://*.vercel.app",
-        "https://askfile.onrender.com"
+        "https://askfile.onrender.com",
+        "*"  # Permite qualquer origem durante desenvolvimento
     ],
     allow_credentials=True,
     allow_methods=["*"],
