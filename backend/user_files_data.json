@@ -25,6 +25,15 @@
         "total_chunks": 200,
         "vectors_inserted": 0
       }
+    },
+    "20250814_1a0df398": {
+      "original_name": "TCC AMANDA CARVALHO DE SOUZA.pdf",
+      "file_path": "user_files\\20250814_1a0df398_TCC AMANDA CARVALHO DE SOUZA.pdf",
+      "summary": "Resumo:\n\nO presente documento é uma monografia de conclusão de curso, intitulada \"Tecnologias educacionais para autistas: explorando ferramentas tecnológicas para apoiar o desenvolvimento social e comportamental\", apresentada ao Curso de Engenharia de Software do Centro Universitário Unidade de Ensino Superior Dom Bosco.\n\nA monografia aborda a análise de aplicativos educacionais voltados para pessoas com Transtorno do Espectro Autista (TEA), buscando investigar seus requisitos técnicos e potenciais melhorias. Os principais tópicos abordados incluem a importância das intervenções tecnológicas na educação especial, as necessidades específicas das crianças com TEA e a avaliação de três aplicativos principais: FunRoutine, Matraquinha e MITA.\n\nOs resultados da pesquisa indicam que, embora os aplicativos sejam eficazes na criação de rotinas estruturadas e no apoio ao desenvolvimento de habilidades de linguagem e cognição, há uma escassez significativa de recursos em português. A conclusão do estudo é que é necessário maior investimento na adaptação cultural e linguística desses aplicativos para melhor atender às necessidades dos usuários lusófonos, promovendo uma educação mais inclusiva e eficaz.",
+      "upload_date": "2025-08-14T01:21:27.662419",
+      "file_size": 1612915,
+      "chunks_count": 100,
+      "text_length": 47709
     }
   }
 }

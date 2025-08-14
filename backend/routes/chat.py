@@ -4,8 +4,8 @@ from groq import Groq
 from dotenv import load_dotenv
 import os
 import logging
-from sentence_transformers import SentenceTransformer
-from pinecone import Pinecone, ServerlessSpec
+import re
+from datetime import datetime
 
 load_dotenv()
 
@@ -17,127 +17,102 @@ router = APIRouter()
 # Email padrão para usuário sem autenticação
 DEFAULT_USER_EMAIL = "usuario@askfile.com"
 
-# Modelo de embedding
-try:
-    embedding_model_name = os.getenv("EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
-    embedding_model = SentenceTransformer(embedding_model_name)
-    logger.info(f"Modelo de embedding carregado: {embedding_model_name}")
-except Exception as e:
-    logger.error(f"Erro ao carregar modelo de embedding: {e}")
-    embedding_model = None
-
-# Pinecone com configuração correta
-try:
-    pinecone_api_key = os.getenv("PINECONE_API_KEY")
-    pinecone_index_name = os.getenv("PINECONE_INDEX_NAME", "askfile")
-    pinecone_host = os.getenv("PINECONE_HOST")
-    
-    if pinecone_api_key:
-        # Inicializa cliente Pinecone
-        pc = Pinecone(api_key=pinecone_api_key)
-        
-        # Conecta ao índice existente
-        if pinecone_host:
-            # Usa host específico se fornecido
-            pinecone_index = pc.Index(pinecone_index_name, host=pinecone_host)
-        else:
-            # Conecta usando apenas o nome do índice
-            pinecone_index = pc.Index(pinecone_index_name)
-        
-        logger.info(f"Pinecone conectado ao índice: {pinecone_index_name}")
-        
-        # Testa a conexão
-        try:
-            stats = pinecone_index.describe_index_stats()
-            logger.info(f"Estatísticas do índice: {stats}")
-        except Exception as e:
-            logger.warning(f"Não foi possível obter estatísticas do índice: {e}")
-            
-    else:
-        pinecone_index = None
-        logger.warning("PINECONE_API_KEY não configurado")
-        
-except Exception as e:
-    logger.error(f"Erro ao inicializar Pinecone: {e}")
-    pinecone_index = None
+# Armazenamento simples em memória
+text_storage = {}
 
 class ChatRequest(BaseModel):
     question: str
     file_id: str = None
 
-def generate_query_embedding(text: str) -> list:
-    """Gera embedding para consulta"""
+def smart_text_search(query: str, file_id: str, user_email: str, max_results: int = 8) -> tuple:
+    """Busca inteligente por texto usando palavras-chave e contexto"""
     try:
-        if not embedding_model:
-            raise RuntimeError("Modelo de embedding não disponível")
-        
-        embedding = embedding_model.encode([text], normalize_embeddings=True)
-        return embedding[0].tolist()
-        
-    except Exception as e:
-        logger.error(f"Erro ao gerar embedding da consulta: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao processar consulta")
-
-def search_in_pinecone(query_embedding: list, user_email: str, file_id: str = None, top_k: int = 10) -> tuple:
-    """Busca no Pinecone"""
-    try:
-        if not pinecone_index:
-            logger.warning("Pinecone não disponível, retornando resultados vazios")
+        # Verifica se há dados para este usuário e arquivo
+        storage_key = f"{user_email}_{file_id}"
+        if storage_key not in text_storage:
             return [], []
         
-        # Filtros de busca
-        filter_dict = {"user_email": user_email}
-        if file_id:
-            filter_dict["file_id"] = file_id
+        file_data = text_storage[storage_key]
+        chunks = file_data.get('chunks', [])
         
-        logger.info(f"Buscando no Pinecone com filtros: {filter_dict}")
+        if not chunks:
+            return [], []
         
-        # Busca vetorial
-        query_results = pinecone_index.query(
-            vector=query_embedding,
-            top_k=top_k,
-            include_metadata=True,
-            filter=filter_dict
-        )
+        # Prepara a consulta
+        query_lower = query.lower()
+        query_words = [word.strip() for word in query_lower.split() if len(word.strip()) > 2]
         
-        logger.info(f"Pinecone retornou {len(query_results.matches)} resultados")
+        if not query_words:
+            return [], []
         
-        # Processa resultados
-        context_parts = []
-        sources = []
+        scored_chunks = []
         
-        for match in query_results.matches:
-            content = match.metadata.get('content', '')
-            file_id_meta = match.metadata.get('file_id', 'Arquivo')
-            score = match.score
+        for i, chunk in enumerate(chunks):
+            chunk_lower = chunk.lower()
+            score = 0
             
-            logger.debug(f"Match encontrado - Score: {score:.3f}, Content length: {len(content)}")
+            # Pontuação por palavras exatas
+            for word in query_words:
+                word_count = chunk_lower.count(word)
+                if word_count > 0:
+                    score += word_count * 2  # Peso maior para matches exatos
             
-            if content.strip() and score > 0.3:  # Filtro de qualidade
-                context_parts.append(content)
-                sources.append({
-                    'content': content[:200] + "..." if len(content) > 200 else content,
+            # Pontuação por palavras similares (raiz da palavra)
+            for word in query_words:
+                if len(word) > 4:
+                    word_root = word[:4]
+                    similar_matches = len(re.findall(rf'\b{word_root}\w*', chunk_lower))
+                    score += similar_matches * 0.5
+            
+            # Pontuação por proximidade das palavras
+            if len(query_words) > 1:
+                for i in range(len(query_words) - 1):
+                    word1, word2 = query_words[i], query_words[i + 1]
+                    if word1 in chunk_lower and word2 in chunk_lower:
+                        pos1 = chunk_lower.find(word1)
+                        pos2 = chunk_lower.find(word2)
+                        distance = abs(pos1 - pos2)
+                        if distance < 100:  # Palavras próximas
+                            score += 1.5
+            
+            # Adiciona bonus se o chunk contém a pergunta como um todo
+            if len(query_lower) > 10 and query_lower in chunk_lower:
+                score += 5
+            
+            if score > 0:
+                scored_chunks.append({
+                    'content': chunk,
                     'score': score,
-                    'file_id': file_id_meta
+                    'index': i
                 })
         
-        logger.info(f"Contexto processado: {len(context_parts)} chunks válidos")
+        # Ordena por score e pega os melhores
+        scored_chunks.sort(key=lambda x: x['score'], reverse=True)
+        best_chunks = scored_chunks[:max_results]
+        
+        context_parts = [chunk['content'] for chunk in best_chunks]
+        sources = [{
+            'content': chunk['content'][:200] + "..." if len(chunk['content']) > 200 else chunk['content'],
+            'score': round(chunk['score'], 2),
+            'file_id': file_id
+        } for chunk in best_chunks]
+        
+        logger.info(f"Busca inteligente retornou {len(context_parts)} resultados para: '{query}'")
         return context_parts, sources
         
     except Exception as e:
-        logger.error(f"Erro na busca Pinecone: {e}")
-        # Retorna resultados vazios em caso de erro, não falha
+        logger.error(f"Erro na busca: {e}")
         return [], []
 
 @router.post("")
 async def send_message(request: ChatRequest = Body(...)):
     """
-    Endpoint principal para chat com arquivo PDF - SEM AUTENTICAÇÃO
+    Endpoint principal para chat com arquivo PDF
     """
     try:
         question = request.question
         file_id = request.file_id
-        user_email = DEFAULT_USER_EMAIL  # Usa email padrão
+        user_email = DEFAULT_USER_EMAIL
         
         if not question:
             raise HTTPException(status_code=400, detail='Pergunta é obrigatória')
@@ -145,103 +120,86 @@ async def send_message(request: ChatRequest = Body(...)):
         if not file_id:
             raise HTTPException(status_code=400, detail='ID do arquivo é obrigatório')
 
-        logger.info(f"Pergunta recebida de {user_email}: {question}")
+        logger.info(f"Pergunta recebida: {question}")
         logger.info(f"Arquivo consultado: {file_id}")
 
-        # Verifica se serviços estão disponíveis
+        # Verifica se Groq está disponível
         if not groq_client:
             raise HTTPException(status_code=503, detail="Serviço de IA não disponível")
 
-        # Gera embedding da pergunta
-        question_embedding = generate_query_embedding(question)
-
-        # Busca contexto relevante no Pinecone
-        context_parts, sources = search_in_pinecone(
-            query_embedding=question_embedding,
-            user_email=user_email,
+        # Busca contexto relevante usando busca inteligente
+        context_parts, sources = smart_text_search(
+            query=question,
             file_id=file_id,
-            top_k=15
+            user_email=user_email,
+            max_results=10
         )
 
         if not context_parts:
-            logger.warning(f"Nenhum contexto encontrado para pergunta: {question}")
+            logger.warning(f"Nenhum contexto encontrado para: {question}")
             return {
-                'answer': "Desculpe, não encontrei informações relevantes no seu arquivo para responder essa pergunta. Isso pode acontecer se:\n\n1. O arquivo ainda não foi completamente processado\n2. A pergunta não está relacionada ao conteúdo do arquivo\n3. Houve algum problema na indexação\n\nTente reformular a pergunta ou verificar se o conteúdo está relacionado ao arquivo enviado.",
+                'answer': "Desculpe, não encontrei informações relevantes no seu arquivo para responder essa pergunta.\n\n**Dicas para melhor resultado:**\n\n1. Use palavras-chave específicas do documento\n2. Tente reformular a pergunta de forma mais direta\n3. Verifique se o conteúdo está relacionado ao arquivo enviado\n\nExemplo: Em vez de 'me fale sobre isso', pergunte 'quais são os principais resultados?' ou 'qual é a conclusão?'",
                 'sources': [],
                 'context': '',
                 'debug_info': {
                     'chunks_found': 0,
                     'context_length': 0,
                     'file_id': file_id,
-                    'user_email': user_email,
-                    'pinecone_available': pinecone_index is not None
+                    'search_type': 'smart_text_search'
                 }
             }
 
         # Constrói contexto para o LLM
-        context = "\n\n".join(context_parts)
+        context = "\n\n---\n\n".join(context_parts)
         
-        logger.info(f"Contexto encontrado: {len(context_parts)} chunks, {len(context)} caracteres")
+        logger.info(f"Contexto encontrado: {len(context_parts)} partes, {len(context)} caracteres")
 
-        # Constrói prompt otimizado
-        prompt = f"""Você é um assistente especializado em analisar documentos PDF e responder perguntas baseadas no conteúdo.
+        # Prompt otimizado para Groq
+        prompt = f"""Você é um assistente especializado em analisar documentos e responder perguntas com base no conteúdo fornecido.
 
-Pergunta do usuário: {question}
+PERGUNTA DO USUÁRIO:
+{question}
 
-Contexto do arquivo PDF:
+CONTEXTO DO DOCUMENTO:
 {context}
 
-Instruções:
-- Responda APENAS com base no contexto fornecido do arquivo PDF
-- Se a informação não estiver no contexto, diga que não encontrou a informação no arquivo
-- Seja preciso e cite trechos específicos quando relevante
-- Use uma linguagem clara e didática
-- Se possível, organize a resposta de forma estruturada
+INSTRUÇÕES IMPORTANTES:
+- Responda APENAS com base no contexto fornecido
+- Se a informação não estiver no contexto, diga claramente que não encontrou no documento
+- Seja preciso e cite partes específicas quando relevante
+- Use linguagem clara e organize a resposta de forma estruturada
+- Se houver dados, números ou fatos específicos, mencione-os
 
-Resposta baseada no arquivo:"""
+RESPOSTA:"""
 
         # Gera resposta com Groq
         try:
             response = groq_client.chat.completions.create(
                 model="llama3-8b-8192",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=1500,
-                temperature=0.1,  # Baixa temperatura para máxima precisão
+                max_tokens=1200,
+                temperature=0.1,
                 top_p=0.9
             )
             
             answer = response.choices[0].message.content
-            logger.info(f"Resposta gerada com Groq: {len(answer)} caracteres")
+            logger.info(f"Resposta gerada: {len(answer)} caracteres")
             
         except Exception as e:
             logger.error(f"Erro ao gerar resposta com Groq: {e}")
-            answer = "Desculpe, houve um erro ao processar sua pergunta com o serviço de IA. Tente novamente em alguns instantes."
-
-        # Salva no histórico automaticamente
-        try:
-            from routes.history import add_chat_entry
-            add_chat_entry(
-                user_email=user_email,
-                question=question,
-                answer=answer,
-                sources=sources
-            )
-            logger.info(f"Conversa salva no histórico para {user_email}")
-        except Exception as history_error:
-            logger.warning(f"Erro ao salvar no histórico: {history_error}")
+            answer = "Desculpe, houve um erro ao processar sua pergunta. Tente novamente em alguns instantes."
 
         return {
             'answer': answer,
             'sources': sources,
-            'context': context[:500] + "..." if len(context) > 500 else context,
+            'context': context[:400] + "..." if len(context) > 400 else context,
             'debug_info': {
                 'chunks_found': len(context_parts),
                 'context_length': len(context),
-                'similarity_scores': [f"{s['score']:.3f}" for s in sources[:5]],
+                'best_scores': [s['score'] for s in sources[:3]],
                 'file_id': file_id,
-                'user_email': user_email,
-                'pinecone_available': pinecone_index is not None,
-                'groq_available': groq_client is not None
+                'search_type': 'smart_text_search',
+                'groq_available': True
             }
         }
         
@@ -253,36 +211,42 @@ Resposta baseada no arquivo:"""
 
 @router.get("/status")
 async def chat_status():
-    """Verifica status dos serviços de chat"""
+    """Verifica status dos serviços"""
     
-    # Testa Pinecone
-    pinecone_status = False
-    pinecone_stats = None
-    if pinecone_index:
-        try:
-            pinecone_stats = pinecone_index.describe_index_stats()
-            pinecone_status = True
-        except Exception as e:
-            logger.error(f"Erro ao testar Pinecone: {e}")
-    
-    # Testa Groq
     groq_status = groq_client is not None
-    
-    status = {
-        "embedding_model": embedding_model is not None,
-        "pinecone": pinecone_status,
-        "groq": groq_status
-    }
+    storage_files = len(text_storage)
     
     response = {
-        "status": "ok" if all(status.values()) else "partial",
-        "services": status,
+        "status": "ok" if groq_status else "partial",
+        "services": {
+            "groq": groq_status,
+            "text_search": True,
+            "storage": True
+        },
         "details": {
-            "embedding_model": embedding_model_name if embedding_model else "Não carregado",
-            "pinecone_index": os.getenv("PINECONE_INDEX_NAME", "Não configurado"),
-            "pinecone_stats": pinecone_stats,
-            "groq_model": "llama3-8b-8192" if groq_status else "Não disponível"
+            "groq_model": "llama3-8b-8192" if groq_status else "Não disponível",
+            "search_type": "smart_text_search",
+            "storage_type": "in_memory",
+            "files_indexed": storage_files
         }
     }
     
     return response
+
+# Função auxiliar para salvar chunks (usada pelo upload.py)
+def save_text_chunks(file_id: str, chunks: list, user_email: str = DEFAULT_USER_EMAIL):
+    """Salva chunks no armazenamento de texto"""
+    try:
+        storage_key = f"{user_email}_{file_id}"
+        text_storage[storage_key] = {
+            'chunks': chunks,
+            'created_at': datetime.now().isoformat(),
+            'total_chunks': len(chunks)
+        }
+        
+        logger.info(f"✅ Salvos {len(chunks)} chunks para arquivo {file_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao salvar chunks: {e}")
+        return False
