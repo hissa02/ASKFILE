@@ -1,0 +1,137 @@
+@startuml
+title DIAGRAMA DE ATIVIDADES - Gerenciamento de Histórico
+start
+:Usuário clica "Histórico";
+:Sistema busca histórico da sessão;
+if (Tem histórico?) then (sim)
+  :Exibe lista de perguntas anteriores;
+  repeat
+    if (Ação no histórico?) then (Ver resposta)
+      :Usuário clica na pergunta;
+      :Sistema mostra resposta completa + fontes;
+      
+      if (Usuário quer copiar?) then (sim)
+        :Usuário clica "Copiar";
+        :Sistema copia texto para clipboard;
+        :Exibe confirmação "Texto copiado";
+      endif
+      
+    else (Voltar)
+      :Retorna ao chat;
+      stop
+    endif
+  repeat while (Continuar no histórico?) is (sim)
+else (não)
+  :Exibe "Nenhuma consulta realizada";
+  :Oferece botão "Começar primeira consulta";
+  :Usuário retorna ao chat;
+endif
+stop
+@enduml
+
+---
+
+@startuml
+title DIAGRAMA DE ATIVIDADES - Limpar Sessão Atual (Seta Circular)
+start
+:Usuário clica "Seta Circular" na área do chat;
+:Sistema exibe diálogo de confirmação;
+note right: "Limpar todos os dados?\n• Histórico de conversas\n• Arquivo carregado\n• Mensagens do chat"
+if (Usuário confirma?) then (sim)
+  :Sistema limpa histórico no servidor;
+  :Remove chunks e metadados;
+  :Limpa mensagens do chat local;
+  :Reseta interface para estado inicial;
+  :Exibe "Dados limpos com sucesso";
+  :Sessão fica limpa e pronta;
+else (não)
+  :Cancela operação;
+  :Volta ao estado anterior;
+endif
+stop
+@enduml
+
+---
+
+@startuml
+title DIAGRAMA DE ATIVIDADES - Troca de Arquivo
+start
+:Usuário clica "Trocar Arquivo";
+:Sistema mostra confirmação;
+note right: "Trocar arquivo?\n• Remove arquivo atual\n• Limpa mensagens do chat\n• Permite upload de novo arquivo"
+if (Usuário confirma?) then (sim)
+  :Limpa arquivo atual da sessão;
+  :Remove chunks e metadados;
+  :Limpa mensagens do chat;
+  :Abre seletor de arquivo;
+  if (Novo arquivo selecionado?) then (sim)
+    :Valida se é PDF;
+    if (PDF válido?) then (sim)
+      :Envia arquivo para servidor;
+      :Processa e gera resumo;
+      :Remove arquivo físico;
+      :Salva chunks na sessão;
+      :Exibe novo resumo;
+      :Chat pronto para perguntas;
+    else (não)
+      :Exibe erro de validação;
+      :Volta ao seletor;
+    endif
+  else (não)
+    :Cancela seleção;
+    :Fica sem arquivo;
+  endif
+else (não)
+  :Cancela operação;
+  :Mantém arquivo atual;
+endif
+stop
+@enduml
+
+---
+
+@startuml
+title DIAGRAMA DE ATIVIDADES - Upload e Chat Completo
+start
+:Usuário acessa página;
+:Sistema gera session ID único;
+:Exibe tela de upload;
+:Usuário clica "Upload";
+:Seleciona arquivo PDF;
+if (PDF válido?) then (sim)
+  :Envia arquivo para servidor;
+  :Sistema extrai texto;
+  :Cria chunks inteligentes;
+  :Gera resumo com LLM;
+  :Remove arquivo físico;
+  :Salva chunks na sessão;
+  :Exibe resumo + sugestões;
+  
+  partition "Loop de Perguntas" {
+    repeat
+      :Usuário digita pergunta;
+      :Envia pergunta;
+      :Sistema busca contexto nos chunks;
+      if (Contexto encontrado?) then (sim)
+        :Consulta LLM (Groq);
+        :Gera resposta baseada no contexto;
+      else (não)
+        :Resposta padrão com dicas;
+      endif
+      :Salva pergunta+resposta no histórico;
+      :Exibe resposta ao usuário;
+      
+      if (Usuário quer continuar?) then (sim)
+        :Continua no loop;
+      else (não)
+        :Finaliza chat;
+        stop
+      endif
+    repeat while (Continuar?) is (sim)
+  }
+else (não)
+  :Exibe erro de validação;
+  :Volta ao upload;
+endif
+stop
+@enduml
