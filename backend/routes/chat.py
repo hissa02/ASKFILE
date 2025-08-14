@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, HTTPException, Depends
+from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel
 from groq import Groq
 from dotenv import load_dotenv
@@ -6,7 +6,6 @@ import os
 import logging
 from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone, ServerlessSpec
-from routes.login import get_current_active_user
 
 load_dotenv()
 
@@ -14,6 +13,9 @@ load_dotenv()
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Email padrão para usuário sem autenticação
+DEFAULT_USER_EMAIL = "usuario@askfile.com"
 
 # Modelo de embedding
 try:
@@ -128,17 +130,14 @@ def search_in_pinecone(query_embedding: list, user_email: str, file_id: str = No
         return [], []
 
 @router.post("")
-async def send_message(
-    request: ChatRequest = Body(...),
-    current_user: dict = Depends(get_current_active_user)
-):
+async def send_message(request: ChatRequest = Body(...)):
     """
-    Endpoint principal para chat com arquivo PDF
+    Endpoint principal para chat com arquivo PDF - SEM AUTENTICAÇÃO
     """
     try:
         question = request.question
         file_id = request.file_id
-        user_email = current_user["email"]
+        user_email = DEFAULT_USER_EMAIL  # Usa email padrão
         
         if not question:
             raise HTTPException(status_code=400, detail='Pergunta é obrigatória')

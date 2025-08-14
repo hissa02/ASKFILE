@@ -8,7 +8,9 @@ import {
   FileText,
   AlertCircle,
   CheckCircle,
-  RotateCcw
+  RotateCcw,
+  Clock,
+  Database
 } from 'lucide-react';
 import './ChatView.css';
 
@@ -41,7 +43,7 @@ const ChatView = ({
     const file = event.target.files[0];
     if (file) {
       if (file.type !== 'application/pdf') {
-        alert('⚠️ Apenas arquivos PDF são aceitos!\n\nObservação: PDFs com imagens não são processados. Apenas texto é analisado.');
+        alert('⚠️ Apenas arquivos PDF são aceitos!\n\n📋 Requisitos:\n• Formato: PDF\n• Tamanho máximo: 50MB\n• Conteúdo: Texto (não apenas imagens)\n\n🔒 Privacidade: O arquivo será processado e removido do servidor automaticamente.');
         return;
       }
       handleFileUpload(file);
@@ -61,7 +63,7 @@ const ChatView = ({
             </div>
             <div className="header-text">
               <h1 className="header-title">AskFile</h1>
-              <p className="header-subtitle">Faça perguntas ao seu PDF</p>
+              <p className="header-subtitle">Consultas inteligentes em PDF</p>
             </div>
           </div>
 
@@ -69,7 +71,7 @@ const ChatView = ({
             <button
               onClick={() => setCurrentView('history')}
               className="header-button"
-              title="Ver Histórico"
+              title="Ver Histórico da Sessão"
             >
               <History size={20} />
             </button>
@@ -88,13 +90,18 @@ const ChatView = ({
                   {user?.name || 'Usuário AskFile'}
                 </div>
                 <div className="user-role">
-                  {uploadedFile ? 'Arquivo carregado' : 'Nenhum arquivo'}
+                  {uploadedFile ? (
+                    <span style={{color: '#10b981'}}>
+                      <Database size={12} style={{display: 'inline', marginRight: '4px'}} />
+                      Arquivo indexado
+                    </span>
+                  ) : 'Nenhum arquivo'}
                 </div>
               </div>
               <button
                 onClick={handleLogout}
                 className="header-button"
-                title="Limpar dados"
+                title="Limpar dados da sessão"
               >
                 <RotateCcw size={20} />
               </button>
@@ -128,14 +135,24 @@ const ChatView = ({
                     ) : (
                       <>
                         <Upload className="upload-button-icon" />
-                        Faça o upload do seu arquivo
+                        Fazer upload do PDF
                       </>
                     )}
                   </button>
                   
                   <div className="upload-notice">
                     <AlertCircle size={16} className="notice-icon" />
-                    <p>Apenas arquivos PDF são aceitos. PDFs com imagens não são processados - apenas texto é analisado.</p>
+                    <p>
+                      <strong>🔒 Privacidade garantida:</strong> Seu arquivo será processado e automaticamente removido do servidor. 
+                      Apenas os dados necessários para as consultas são mantidos em formato indexado.
+                    </p>
+                  </div>
+                  
+                  <div className="upload-notice" style={{marginTop: '1rem', backgroundColor: '#f0f9ff', borderColor: '#0891b2'}}>
+                    <AlertCircle size={16} className="notice-icon" style={{color: '#0891b2'}} />
+                    <p style={{color: '#0c4a6e'}}>
+                      <strong>📋 Requisitos:</strong> Arquivos PDF com texto (máx. 50MB). PDFs apenas com imagens não são suportados.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -157,8 +174,14 @@ const ChatView = ({
                 <div className="file-info-header">
                   <CheckCircle size={24} className="success-icon" />
                   <div>
-                    <h3>Arquivo processado com sucesso!</h3>
+                    <h3>Arquivo processado e indexado!</h3>
                     <p>{uploadedFile.name}</p>
+                    {uploadedFile.isTemporary && (
+                      <p style={{fontSize: '0.75rem', color: '#0891b2', marginTop: '0.25rem'}}>
+                        <Clock size={12} style={{display: 'inline', marginRight: '4px'}} />
+                        Arquivo físico removido - dados indexados para consultas
+                      </p>
+                    )}
                   </div>
                 </div>
                 
@@ -192,7 +215,7 @@ const ChatView = ({
                   disabled={fileProcessing}
                 >
                   <Upload size={16} />
-                  Trocar arquivo
+                  Processar outro arquivo
                 </button>
               </div>
             </div>
@@ -212,13 +235,18 @@ const ChatView = ({
                 {/* Fontes consultadas para respostas do bot */}
                 {message.sender === 'bot' && message.sources && message.sources.length > 0 && (
                   <div className="message-sources">
-                    <h4>Fontes no documento:</h4>
+                    <h4>Trechos consultados no documento:</h4>
                     <ul>
                       {message.sources.map((source, index) => (
                         <li key={index} className="source-item">
                           <FileText size={14} className="source-icon" />
                           <span className="source-content">
                             "{source.content?.substring(0, 150)}..."
+                            {source.filename && (
+                              <span style={{display: 'block', fontSize: '0.75rem', color: '#6b7280', marginTop: '2px'}}>
+                                📄 {source.filename}
+                              </span>
+                            )}
                           </span>
                         </li>
                       ))}
@@ -231,7 +259,7 @@ const ChatView = ({
                     <button
                       onClick={() => copyToClipboard(message.text)}
                       className="copy-button"
-                      title="Copiar texto"
+                      title="Copiar resposta"
                     >
                       <Copy size={16} />
                     </button>
@@ -241,7 +269,7 @@ const ChatView = ({
 
                 {message.sender === 'bot' && (
                   <div className="message-disclaimer">
-                    <span>O AskFile pode cometer erros. Confira sempre as respostas.</span>
+                    <span>💡 O AskFile pode cometer erros. Sempre confira as informações importantes.</span>
                   </div>
                 )}
               </div>
@@ -253,7 +281,7 @@ const ChatView = ({
             <div className="chat-message bot loading-message">
               <div className="message-content">
                 <div className="spinner"></div>
-                <p>Analisando seu arquivo...</p>
+                <p>Analisando o documento indexado...</p>
               </div>
             </div>
           )}
@@ -265,16 +293,18 @@ const ChatView = ({
         {/* Informação do arquivo atual */}
         {uploadedFile && (
           <div className="current-file-indicator">
-            <FileText size={14} />
-            <span>Consultando: {uploadedFile.name}</span>
-            <button 
-              onClick={handleUploadClick}
-              className="change-file-btn"
-              disabled={fileProcessing}
-              title="Trocar arquivo"
-            >
-              {fileProcessing ? 'Processando...' : 'Trocar'}
-            </button>
+            <Database size={14} />
+            <span>Consultando dados de: {uploadedFile.name}</span>
+            <div>
+              <button 
+                onClick={handleUploadClick}
+                className="change-file-btn"
+                disabled={fileProcessing}
+                title="Processar outro arquivo"
+              >
+                {fileProcessing ? 'Processando...' : 'Trocar'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -305,7 +335,7 @@ const ChatView = ({
               value={currentMessage}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder={uploadedFile ? "Digite sua pergunta sobre o arquivo..." : "Primeiro, faça o upload de um arquivo PDF"}
+              placeholder={uploadedFile ? "Digite sua pergunta sobre o documento..." : "Primeiro, faça o upload de um arquivo PDF"}
               className="chat-input"
               disabled={isLoading || !uploadedFile}
             />
@@ -328,8 +358,8 @@ const ChatView = ({
         <div className="input-tip">
           <span>
             {uploadedFile 
-              ? `Faça perguntas sobre: ${uploadedFile.name}` 
-              : 'Faça upload de um PDF para começar'
+              ? `💬 Dados indexados de: ${uploadedFile.name} | 🔒 Arquivo físico removido por segurança` 
+              : '📁 Faça upload de um PDF para começar a fazer perguntas'
             }
           </span>
         </div>

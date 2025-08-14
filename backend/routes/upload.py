@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from fastapi.responses import JSONResponse
 import os
 import uuid
@@ -11,7 +11,6 @@ from pypdf import PdfReader
 from groq import Groq
 from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone, ServerlessSpec
-from routes.login import get_current_active_user
 
 # Configuração
 load_dotenv()
@@ -23,6 +22,9 @@ UPLOAD_DIR = "user_files"
 USER_DATA_FILE = "user_files_data.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
+# Email padrão para usuário sem autenticação
+DEFAULT_USER_EMAIL = "usuario@askfile.com"
 
 # Inicialização dos serviços
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -113,25 +115,44 @@ def save_user_files_data():
 load_user_files_data()
 
 def extract_text_from_pdf(file_path: str) -> str:
-    """Extrai texto do PDF"""
+    """Extrai texto do PDF - otimizado para memória"""
     try:
         reader = PdfReader(file_path)
-        text = ""
+        text_parts = []
+        max_pages = 50  # Limita páginas processadas
         
-        for page_num, page in enumerate(reader.pages):
+        total_pages = min(len(reader.pages), max_pages)
+        
+        for page_num in range(total_pages):
             try:
+                page = reader.pages[page_num]
                 page_text = page.extract_text()
+                
                 if page_text and page_text.strip():
-                    text += f"\n\n--- Página {page_num + 1} ---\n{page_text.strip()}\n"
+                    # Limita o texto por página
+                    page_text = page_text.strip()
+                    if len(page_text) > 5000:  # Máximo 5KB por página
+                        page_text = page_text[:5000] + "..."
+                    
+                    text_parts.append(f"\n\n--- Página {page_num + 1} ---\n{page_text}\n")
+                    
             except Exception as e:
                 logger.warning(f"Erro na página {page_num + 1}: {e}")
                 continue
         
-        if not text.strip():
+        if not text_parts:
             raise ValueError("Nenhum texto foi extraído do PDF")
         
-        logger.info(f"Texto extraído: {len(text):,} caracteres de {len(reader.pages)} páginas")
-        return text
+        # Junta o texto com limite total
+        full_text = ''.join(text_parts)
+        max_total_size = 200000  # 200KB total
+        
+        if len(full_text) > max_total_size:
+            logger.warning(f"Texto muito grande ({len(full_text)} chars), truncando para {max_total_size}")
+            full_text = full_text[:max_total_size] + "\n\n[Texto truncado devido ao tamanho]"
+        
+        logger.info(f"Texto extraído: {len(full_text):,} caracteres de {total_pages} páginas")
+        return full_text
         
     except Exception as e:
         logger.error(f"Erro ao extrair texto: {e}")
@@ -179,51 +200,115 @@ Mantenha o resumo claro e objetivo."""
         logger.error(f"Erro ao gerar resumo: {e}")
         return f"Documento PDF: {filename}\n\nEste arquivo foi processado com sucesso. Faça perguntas sobre o conteúdo para obter informações específicas."
 
-def create_chunks(text: str, chunk_size: int = 2000, overlap: int = 400) -> list:
-    """Divide texto em chunks com sobreposição"""
-    chunks = []
-    text_length = len(text)
-    start = 0
-    
-    while start < text_length:
-        end = min(start + chunk_size, text_length)
+def create_chunks(text: str, chunk_size: int = 1500, overlap: int = 300) -> list:
+    """Divide texto em chunks com sobreposição - otimizado para memória"""
+    try:
+        # Limita o tamanho do texto para evitar MemoryError
+        max_text_size = 500000  # 500KB de texto
+        if len(text) > max_text_size:
+            logger.warning(f"Texto muito grande ({len(text)} chars), limitando a {max_text_size} chars")
+            text = text[:max_text_size]
         
-        # Tenta quebrar em final de frase
-        if end < text_length:
-            for separator in ["\n\n", "\n", ".", "!", "?"]:
-                sep_pos = text.rfind(separator, max(start + chunk_size//2, start), end)
-                if sep_pos > start + chunk_size//2:
-                    end = sep_pos + len(separator)
-                    break
+        chunks = []
+        text_length = len(text)
+        start = 0
+        max_chunks = 200  # Limita número de chunks
         
-        chunk_text = text[start:end].strip()
+        while start < text_length and len(chunks) < max_chunks:
+            end = min(start + chunk_size, text_length)
+            
+            # Tenta quebrar em final de frase (busca mais eficiente)
+            if end < text_length:
+                # Busca apenas nos últimos 200 caracteres
+                search_start = max(start + chunk_size//2, end - 200)
+                for separator in ["\n\n", "\n", ".", "!", "?"]:
+                    sep_pos = text.rfind(separator, search_start, end)
+                    if sep_pos > search_start:
+                        end = sep_pos + len(separator)
+                        break
+            
+            chunk_text = text[start:end].strip()
+            
+            # Filtra chunks muito pequenos ou muito grandes
+            if 50 < len(chunk_text) < 3000:
+                chunks.append(chunk_text)
+            
+            start = end - overlap
+            if start >= text_length:
+                break
         
-        if len(chunk_text) > 50:
-            chunks.append(chunk_text)
+        logger.info(f"Texto dividido em {len(chunks)} chunks (tamanho original: {text_length} chars)")
+        return chunks
         
-        start = end - overlap
-        if start >= text_length:
-            break
-    
-    logger.info(f"Texto dividido em {len(chunks)} chunks")
-    return chunks
+    except Exception as e:
+        logger.error(f"Erro ao criar chunks: {e}")
+        # Fallback: cria chunks menores e mais simples
+        simple_chunks = []
+        words = text.split()
+        current_chunk = []
+        current_size = 0
+        
+        for word in words[:5000]:  # Limita a 5000 palavras
+            current_chunk.append(word)
+            current_size += len(word) + 1
+            
+            if current_size >= 800:  # Chunks menores
+                chunk_text = ' '.join(current_chunk).strip()
+                if len(chunk_text) > 50:
+                    simple_chunks.append(chunk_text)
+                current_chunk = current_chunk[-20:]  # Mantém sobreposição
+                current_size = sum(len(w) + 1 for w in current_chunk)
+                
+            if len(simple_chunks) >= 150:  # Limita total
+                break
+        
+        # Adiciona último chunk
+        if current_chunk:
+            chunk_text = ' '.join(current_chunk).strip()
+            if len(chunk_text) > 50:
+                simple_chunks.append(chunk_text)
+        
+        logger.info(f"Fallback: criados {len(simple_chunks)} chunks simples")
+        return simple_chunks
 
 def generate_embeddings(texts: list) -> list:
-    """Gera embeddings para lista de textos"""
+    """Gera embeddings para lista de textos - otimizado para memória"""
     try:
         if not embedding_model:
             raise RuntimeError("Modelo de embedding não disponível")
         
-        embeddings = embedding_model.encode(
-            texts,
-            batch_size=16,
-            show_progress_bar=False,
-            convert_to_numpy=True,
-            normalize_embeddings=True
-        )
+        # Limita o número de textos processados
+        max_texts = 150
+        if len(texts) > max_texts:
+            logger.warning(f"Muitos chunks ({len(texts)}), limitando a {max_texts}")
+            texts = texts[:max_texts]
         
-        logger.info(f"Embeddings gerados: {len(embeddings)} vetores de {len(embeddings[0])} dimensões")
-        return embeddings.tolist()
+        # Processa em lotes menores para economizar memória
+        batch_size = 8  # Reduzido de 16 para 8
+        all_embeddings = []
+        
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            logger.info(f"Processando lote {i//batch_size + 1}/{(len(texts)-1)//batch_size + 1}")
+            
+            try:
+                batch_embeddings = embedding_model.encode(
+                    batch,
+                    batch_size=len(batch),
+                    show_progress_bar=False,
+                    convert_to_numpy=True,
+                    normalize_embeddings=True
+                )
+                all_embeddings.extend(batch_embeddings.tolist())
+                
+            except Exception as e:
+                logger.error(f"Erro no lote {i//batch_size + 1}: {e}")
+                # Em caso de erro, cria embeddings vazios para manter a sincronização
+                for _ in batch:
+                    all_embeddings.append([0.0] * 768)  # Vetor zero com dimensão padrão
+        
+        logger.info(f"Embeddings gerados: {len(all_embeddings)} vetores")
+        return all_embeddings
         
     except Exception as e:
         logger.error(f"Erro ao gerar embeddings: {e}")
@@ -291,12 +376,9 @@ def index_to_pinecone(chunks: list, embeddings: list, file_id: str, user_email: 
         }
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def upload_file(
-    file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_active_user)
-):
+async def upload_file(file: UploadFile = File(...)):
     """
-    Upload e processamento de arquivo PDF
+    Upload e processamento de arquivo PDF - SEM AUTENTICAÇÃO
     """
     # Validações
     if not file.filename.lower().endswith('.pdf'):
@@ -305,7 +387,8 @@ async def upload_file(
             detail="Apenas arquivos PDF são aceitos"
         )
 
-    user_email = current_user["email"]
+    # Usa email padrão
+    user_email = DEFAULT_USER_EMAIL
     file_path = None
     
     try:
@@ -393,9 +476,9 @@ async def upload_file(
         )
 
 @router.get("/user-files")
-async def get_user_files(current_user: dict = Depends(get_current_active_user)):
-    """Lista arquivos do usuário"""
-    user_email = current_user["email"]
+async def get_user_files():
+    """Lista arquivos do usuário - SEM AUTENTICAÇÃO"""
+    user_email = DEFAULT_USER_EMAIL
     
     if user_email not in user_files_data:
         return {"files": []}
@@ -415,9 +498,9 @@ async def get_user_files(current_user: dict = Depends(get_current_active_user)):
     return {"files": files}
 
 @router.delete("/{file_id}")
-async def delete_file(file_id: str, current_user: dict = Depends(get_current_active_user)):
-    """Remove arquivo do usuário"""
-    user_email = current_user["email"]
+async def delete_file(file_id: str):
+    """Remove arquivo do usuário - SEM AUTENTICAÇÃO"""
+    user_email = DEFAULT_USER_EMAIL
     
     if user_email not in user_files_data or file_id not in user_files_data[user_email]:
         raise HTTPException(
