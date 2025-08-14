@@ -1,0 +1,129 @@
+@startuml
+title DIAGRAMA DE CLASSES - AskFile
+
+skinparam classFontSize 10
+skinparam shadowing false
+skinparam classArrowThickness 1
+
+' Classe representando o usuário/sessão
+class Usuario {
+    -sessionId: String
+    +fazerPergunta(pergunta: String): String
+    +acessarHistorico(): List<Interacao>
+    +trocarDocumento(novoArquivo: File): Boolean
+    +iniciarNovaSessao(): String
+    +limparSessaoAtual(): Boolean
+}
+
+' Classe principal do sistema (backend)
+class SistemaAskFile {
+    -textStorage: Map<String, FileData>
+    -historyStorage: Map<String, List<Interacao>>
+    -groqClient: GroqAPI
+    +processarUpload(arquivo: File, sessionId: String): FileData
+    +processarPergunta(pergunta: String, fileId: String, sessionId: String): Resposta
+    +buscarTrechos(query: String, fileId: String, sessionId: String): List<Chunk>
+    +obterHistorico(sessionId: String): List<Interacao>
+    +limparHistorico(sessionId: String): Boolean
+    +gerarTermosBusca(query: String): List<String>
+}
+
+' Classe para gerenciar documentos PDF
+class DocumentoPDF {
+    -fileId: String
+    -nomeOriginal: String
+    -resumo: String
+    -chunks: List<String>
+    -dataUpload: DateTime
+    -arquivoRemovido: Boolean
+    +extrairTexto(): String
+    +criarChunks(texto: String): List<String>
+    +gerarResumo(texto: String): String
+}
+
+' Classe para histórico de interações
+class HistoricoSessao {
+    -interacoes: List<Interacao>
+    +adicionarInteracao(pergunta: String, resposta: String, fontes: List<String>)
+    +listarInteracoes(): List<Interacao>
+    +limparHistorico(): Boolean
+}
+
+' Classe para representar uma interação
+class Interacao {
+    -pergunta: String
+    -resposta: String
+    -fontes: List<String>
+    -fileId: String
+    -timestamp: DateTime
+}
+
+' Classe para chunks de texto
+class ChunkTexto {
+    -conteudo: String
+    -score: Double
+    -termosEncontrados: List<String>
+    +calcularRelevancia(query: String): Double
+}
+
+' Classe para API externa
+class GroqAPI {
+    +gerarResposta(contexto: String, pergunta: String): String
+    +expandirTermosBusca(query: String): List<String>
+}
+
+' Classe para isolamento de sessão
+class GerenciadorSessao {
+    -sessoes: Map<String, DadosSessao>
+    +criarSessao(): String
+    +obterDadosSessao(sessionId: String): DadosSessao
+    +limparSessao(sessionId: String): Boolean
+}
+
+' Classe para dados de uma sessão específica
+class DadosSessao {
+    -sessionId: String
+    -arquivosCarregados: List<String>
+    -historicoAtivo: Boolean
+}
+
+' Relacionamentos principais
+Usuario ||--o{ SistemaAskFile : utiliza
+SistemaAskFile ||--o{ DocumentoPDF : gerencia
+SistemaAskFile ||--o{ HistoricoSessao : mantém
+SistemaAskFile ||--|| GroqAPI : consulta
+
+' Relacionamentos de composição
+HistoricoSessao ||--o{ Interacao : contém
+DocumentoPDF ||--o{ ChunkTexto : possui
+Interacao ||--o{ ChunkTexto : referencia
+
+' Relacionamentos de dependência
+SistemaAskFile ..> GerenciadorSessao : usa
+Usuario ..> DadosSessao : possui
+
+note right of Usuario
+  Cada usuário possui uma sessão única
+  com ID gerado automaticamente
+  sem necessidade de login.
+end note
+
+note left of SistemaAskFile
+  Armazena dados em memória
+  com isolamento por sessão
+  Remove arquivos físicos após processamento
+end note
+
+note bottom of DocumentoPDF
+  Arquivos PDF são processados,
+  chunkeados e indexados
+  O arquivo físico é removido por segurança
+end note
+
+note top of HistoricoSessao
+  Histórico isolado por sessão
+  Máximo 50 interações por sessão
+  Limita crescimento da memória
+end note
+
+@enduml

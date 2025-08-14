@@ -1,0 +1,109 @@
+---
+
+@startuml
+title CASO DE USO - Gerenciar Sessão
+left to right direction
+actor Usuario
+usecase "Iniciar\nsessão" as IS
+usecase "Gerar\nID único" as GI
+usecase "Criar\nemail" as CE
+usecase "Manter sessão\nativa" as MSA
+
+Usuario --> IS
+IS --> GI : <<include>>
+GI --> CE : <<include>>
+IS --> MSA : <<include>>
+@enduml
+
+---
+
+@startuml
+title CASO DE USO - Trocar Arquivo
+left to right direction
+actor Usuario
+usecase "Solicitar\ntroca" as ST
+usecase "Confirmar\noperação" as CO
+usecase "Limpar dados\nanteriores" as LD
+usecase "Selecionar\nnovo arquivo" as SN
+usecase "Processar\nnovo PDF" as PN
+
+Usuario --> ST
+ST --> CO : <<include>>
+CO --> LD : <<include>>
+LD --> SN : <<include>>
+SN --> PN : <<include>>
+@enduml
+
+---
+
+@startuml
+title 1. CASO DE USO - Fazer Pergunta
+left to right direction
+actor Usuario
+usecase "Fazer\npergunta" as FP
+usecase "Processar\npergunta" as PR
+usecase "Buscar contexto\nnos chunks" as BC
+usecase "Consultar\nLLM" as CL
+usecase "Salvar no\nhistórico" as SH
+
+Usuario --> FP
+FP --> PR : <<include>>
+PR --> BC : <<include>>
+BC --> CL : <<include>>
+CL --> SH : <<include>>
+@enduml
+
+---
+
+@startuml
+title CASO DE USO - Upload e Processamento
+left to right direction
+actor Usuario
+usecase "Escolher\ndocumento" as ED
+usecase "Validar\nPDF" as VP
+usecase "Processar\ndocumento" as PD
+usecase "Extrair\ntexto" as ET
+usecase "Criar\nchunks" as CC
+usecase "Gerar\nresumo" as GR
+
+Usuario --> ED
+ED --> VP : <<include>>
+VP --> PD : <<include>>
+PD --> ET : <<include>>
+ET --> CC : <<include>>
+CC --> GR : <<include>>
+@enduml
+
+---
+
+@startuml
+title  CASO DE USO - Gerenciar Histórico
+left to right direction
+actor Usuario
+usecase "Ver\nhistórico" as VH
+usecase "Listar\nconversas" as LC
+usecase "Ver resposta\ncompleta" as VRC
+usecase "Copiar\nresposta" as CR
+
+Usuario --> VH
+VH --> LC : <<include>>
+LC --> VRC : <<include>>
+VRC --> CR : <<extend>>
+@enduml
+
+---
+
+@startuml
+title CASO DE USO - Limpar Sessão (Seta Circular)
+left to right direction
+actor Usuario
+usecase "Limpar sessão\natual" as LSA
+usecase "Confirmar\nlimpeza" as CL
+usecase "Resetar\ninterface" as RI
+usecase "Limpar\ntodos dados" as LTD
+
+Usuario --> LSA
+LSA --> CL : <<include>>
+CL --> LTD : <<include>>
+LTD --> RI : <<include>>
+@enduml

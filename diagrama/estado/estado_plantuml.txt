@@ -1,0 +1,197 @@
+@startuml
+title DIAGRAMA DE ESTADOS - Gerenciamento de Sessão
+!theme plain
+skinparam state {
+    BorderColor DarkBlue
+    FontSize 12
+}
+
+[*] --> Verificando : Sistema iniciando
+
+state Verificando {
+  Verificando : Buscando ID da sessão
+  Verificando : Verificando localStorage
+}
+
+state SessaoAtiva {
+  SessaoAtiva : ID único criado/carregado
+  SessaoAtiva : Dados isolados por usuário
+}
+
+state CriandoNova {
+  CriandoNova : Gerando novo ID único
+  CriandoNova : Salvando no navegador
+}
+
+Verificando --> SessaoAtiva : ID encontrado
+Verificando --> CriandoNova : Sem ID
+CriandoNova --> SessaoAtiva : ID criado
+SessaoAtiva --> [*] : Sair
+@enduml
+
+---
+
+@startuml
+title DIAGRAMA DE ESTADOS - Upload de Arquivo
+!theme plain
+skinparam state {
+    BorderColor DarkBlue
+    FontSize 12
+}
+
+[*] --> SemArquivo : Sistema pronto
+
+state SemArquivo {
+  SemArquivo : Tela de upload disponível
+  SemArquivo : Aguardando seleção de PDF
+}
+
+state Validando {
+  Validando : Verificando formato PDF
+  Validando : Verificando tamanho < 25MB
+}
+
+state Processando {
+  Processando : Extraindo texto do PDF
+  Processando : Criando chunks e resumo
+}
+
+state ArquivoPronto {
+  ArquivoPronto : Documento indexado
+  ArquivoPronto : Pronto para perguntas
+}
+
+state Erro {
+  Erro : Falha na validação/processamento
+}
+
+SemArquivo --> Validando : Usuário seleciona PDF
+Validando --> Processando : PDF válido
+Validando --> Erro : PDF inválido
+Processando --> ArquivoPronto : Sucesso
+Processando --> Erro : Falha
+ArquivoPronto --> Validando : Trocar arquivo
+Erro --> SemArquivo : Tentar novamente
+SemArquivo --> [*] : Sair
+@enduml
+
+---
+
+@startuml
+title DIAGRAMA DE ESTADOS - Processamento de Pergunta
+!theme plain
+skinparam state {
+    BorderColor DarkBlue
+    FontSize 12
+}
+
+[*] --> Aguardando : Sistema pronto
+
+state Aguardando {
+  Aguardando : Campo disponível para pergunta
+  Aguardando : Documento carregado e ativo
+}
+
+state Processando {
+  Processando : Buscando contexto no documento
+  Processando : Consultando IA (Groq)
+}
+
+state Respondendo {
+  Respondendo : Exibindo resposta gerada
+  Respondendo : Salvando no histórico
+}
+
+state Erro {
+  Erro : Falha no processamento
+  Erro : Sem contexto encontrado
+}
+
+Aguardando --> Processando : Usuário envia pergunta
+Processando --> Respondendo : Resposta gerada
+Processando --> Erro : Falha ou sem contexto
+Respondendo --> Aguardando : Nova pergunta
+Erro --> Aguardando : Tentar novamente
+Aguardando --> [*] : Sair
+@enduml
+
+---
+
+@startuml
+title DIAGRAMA DE ESTADOS - Gerenciamento de Histórico
+!theme plain
+skinparam state {
+    BorderColor DarkBlue
+    FontSize 12
+}
+
+[*] --> HistoricoSolicitado : Usuário clica histórico
+
+state HistoricoSolicitado {
+  HistoricoSolicitado : Buscando dados do usuário
+  HistoricoSolicitado : Carregando interface
+}
+
+state ExibindoHistorico {
+  ExibindoHistorico : Lista de perguntas
+  ExibindoHistorico : Dados isolados por sessão
+  ExibindoHistorico : Opção de expandir respostas
+}
+
+state HistoricoVazio {
+  HistoricoVazio : Nenhuma conversa encontrada
+  HistoricoVazio : Opção de começar chat
+}
+
+state VisualizandoResposta {
+  VisualizandoResposta : Resposta completa + fontes
+  VisualizandoResposta : Opção de copiar texto
+}
+
+HistoricoSolicitado --> ExibindoHistorico : Dados encontrados
+HistoricoSolicitado --> HistoricoVazio : Sem dados
+ExibindoHistorico --> VisualizandoResposta : Usuário clica pergunta
+VisualizandoResposta --> ExibindoHistorico : Voltar à lista
+ExibindoHistorico --> [*] : Voltar ao chat
+HistoricoVazio --> [*] : Voltar ao chat
+@enduml
+
+---
+
+@startuml
+title DIAGRAMA DE ESTADOS - Fluxo Geral do Sistema
+!theme plain
+skinparam state {
+    BorderColor DarkBlue
+    FontSize 12
+}
+
+[*] --> Inicializando : Abrindo aplicação
+
+state Inicializando {
+  Inicializando : Criando/carregando sessão
+  Inicializando : Configurando interface
+}
+
+state TelaInicial {
+  TelaInicial : Pronto para upload
+  TelaInicial : Sem arquivo carregado
+}
+
+state ChatAtivo {
+  ChatAtivo : Arquivo carregado
+  ChatAtivo : Pronto para perguntas
+}
+
+state VisualizandoHistorico {
+  VisualizandoHistorico : Exibindo conversas antigas
+  VisualizandoHistorico : Dados isolados por usuário
+}
+
+Inicializando --> TelaInicial : Sistema pronto
+TelaInicial --> ChatAtivo : Arquivo processado
+ChatAtivo --> VisualizandoHistorico : Ver histórico
+ChatAtivo --> TelaInicial : Limpar sessão
+VisualizandoHistorico --> ChatAtivo : Voltar ao chat
+TelaInicial --> [*] : Sair
+@enduml

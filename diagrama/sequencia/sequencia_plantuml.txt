@@ -1,0 +1,99 @@
+@startuml
+title DIAGRAMA DE SEQUÊNCIA - Upload Completo
+actor Usuario
+participant Interface
+participant Sistema
+participant LLM
+
+Usuario -> Interface: Acessa página
+Usuario -> Interface: Clica "Upload"
+Interface -> Usuario: Seleciona arquivo
+Interface -> Sistema: Enviar arquivo
+Sistema -> LLM: Processar e gerar resumo
+LLM --> Sistema: Resumo
+Sistema -> Interface: Exibir resumo
+
+loop Perguntas
+    Usuario -> Interface: Digita pergunta
+    Interface -> Sistema: Enviar pergunta
+    Sistema -> LLM: Buscar trechos relevantes
+    LLM --> Sistema: Resposta + trechos
+    Sistema -> Interface: Mostrar resposta
+    Sistema -> Sistema: Salvar no histórico
+end
+@enduml
+
+---
+
+@startuml
+title DIAGRAMA DE SEQUÊNCIA - Gerenciar Histórico
+actor Usuario
+participant Interface
+participant Sistema
+
+Usuario -> Interface: Clica "Histórico"
+Interface -> Sistema: Solicitar lista de perguntas
+Sistema -> Sistema: Buscar histórico
+Sistema -> Interface: Mostrar lista de perguntas
+
+alt Visualizar resposta
+    Usuario -> Interface: Clica pergunta
+    Interface -> Sistema: Solicitar resposta completa
+    Sistema -> Interface: Mostrar resposta + fontes
+    
+    alt Copiar resposta
+        Usuario -> Interface: Clica "Copiar"
+        Interface -> Interface: Copia texto para clipboard
+        Interface -> Usuario: Exibe "Texto copiado"
+    end
+end
+
+Usuario -> Interface: Clica "Voltar ao Chat"
+Interface -> Usuario: Retorna à tela de chat
+@enduml
+
+---
+
+@startuml
+title DIAGRAMA DE SEQUÊNCIA - Limpar Sessão Atual (Seta Circular)
+actor Usuario
+participant Interface
+participant Sistema
+
+Usuario -> Interface: Clica "Seta Circular" (na área do chat)
+Interface -> Usuario: Exibe diálogo de confirmação
+note right: "Limpar todos os dados?\n• Histórico de conversas\n• Arquivo carregado\n• Mensagens do chat"
+
+alt Usuário confirma
+    Usuario -> Interface: Clica "Confirmar"
+    Interface -> Sistema: Limpar sessão atual
+    Sistema -> Sistema: Apagar histórico, arquivo e mensagens
+    Sistema -> Interface: Reseta interface para estado inicial
+    Interface -> Usuario: Exibe "Dados limpos com sucesso"
+else Usuário cancela
+    Usuario -> Interface: Clica "Cancelar"
+    Interface -> Usuario: Mantém estado atual
+end
+@enduml
+
+---
+
+@startuml
+title DIAGRAMA DE SEQUÊNCIA - Trocar Arquivo
+actor Usuario
+participant Interface
+participant Backend
+participant LLM
+
+Usuario -> Interface: Clica "Trocar Arquivo"
+Interface -> Usuario: Mostrar confirmação
+alt Confirmado
+    Usuario -> Interface: Seleciona novo arquivo
+    Interface -> Backend: Enviar arquivo
+    Backend -> LLM: Processar e gerar resumo
+    LLM --> Backend: Novo resumo
+    Backend -> Interface: Exibir novo resumo
+else Cancelado
+    Usuario -> Interface: Voltar ao chat
+end
+@enduml
