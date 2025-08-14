@@ -4,6 +4,11 @@ import HistoryView from './components/HistoryView/HistoryView';
 import './App.css';
 
 const AskFileSystem = () => {
+  // === FUNÇÃO PARA GERAR ID ÚNICO ===
+  const generateSessionId = useCallback(() => {
+    return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }, []);
+
   // === ESTADOS PRINCIPAIS ===
   const [currentView, setCurrentView] = useState('chat');
   const [chatMessages, setChatMessages] = useState([]);
@@ -13,16 +18,27 @@ const AskFileSystem = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [fileProcessing, setFileProcessing] = useState(false);
+  
+  // === NOVO: ID ÚNICO POR USUÁRIO/SESSÃO ===
+  const [userSessionId] = useState(() => {
+    // Verifica se já existe um ID salvo no localStorage
+    let sessionId = localStorage.getItem('askfile_session_id');
+    if (!sessionId) {
+      sessionId = generateSessionId();
+      localStorage.setItem('askfile_session_id', sessionId);
+    }
+    return sessionId;
+  });
 
   // === CONFIGURAÇÕES ===
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.com';
 
-  // === USUÁRIO FICTÍCIO ===
-  const defaultUser = {
-    id: 1,
+  // === USUÁRIO FICTÍCIO COM ID ÚNICO ===
+  const defaultUser = useMemo(() => ({
+    id: userSessionId,
     name: "Usuário AskFile",
-    email: "usuario@askfile.com"
-  };
+    email: `${userSessionId}@askfile.com`  // Email único baseado no session ID
+  }), [userSessionId]);
 
   // === SUGESTÕES INICIAIS ===
   const quickSuggestions = useMemo(() => [
@@ -82,7 +98,8 @@ const AskFileSystem = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: questionToSend,
-          file_id: uploadedFile.id
+          file_id: uploadedFile.id,
+          user_email: defaultUser.email  // MODIFICADO: Usa o email único
         }),
       });
 
@@ -116,7 +133,7 @@ const AskFileSystem = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentMessage, isLoading, chatMessages.length, API_BASE_URL, uploadedFile]);
+  }, [currentMessage, isLoading, chatMessages.length, API_BASE_URL, uploadedFile, defaultUser.email]);
 
   // === ENTER PARA ENVIAR ===
   const handleKeyDown = useCallback((event) => {
@@ -132,7 +149,7 @@ const AskFileSystem = () => {
     }).catch(err => console.error('Erro ao copiar texto: ', err));
   }, []);
 
-  // === UPLOAD CORRIGIDO ===
+  // === UPLOAD MODIFICADO ===
   const handleFileUpload = useCallback(async (file) => {
     if (!file) {
       alert("Nenhum arquivo selecionado.");
@@ -155,6 +172,7 @@ const AskFileSystem = () => {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('user_email', defaultUser.email);  // NOVO: Adiciona o email único
 
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
@@ -173,7 +191,7 @@ const AskFileSystem = () => {
         });
 
         alert(`Arquivo "${file.name}" processado com sucesso!`);
-        console.log('Novo arquivo carregado:', file.name);
+        console.log('Novo arquivo carregado para sessão:', userSessionId);
       } else {
         throw new Error(data.detail || `Erro ao processar arquivo: ${response.statusText}`);
       }
@@ -185,7 +203,7 @@ const AskFileSystem = () => {
     } finally {
       setFileProcessing(false);
     }
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, defaultUser.email, userSessionId]);
 
   // === TROCAR ARQUIVO ===
   const handleChangeFile = useCallback(() => {
@@ -232,19 +250,53 @@ const AskFileSystem = () => {
     }
   }, [API_BASE_URL, defaultUser.email]);
 
-  // === LOGOUT ===
+  // === LOGOUT/LIMPAR DADOS ===
   const handleLogout = useCallback(async () => {
-    try {
-      await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, { method: 'DELETE' });
-    } catch (error) {
-      console.error('Erro ao limpar histórico no servidor:', error);
-    }
+    const confirmClear = window.confirm(
+      'Isso irá limpar todos os dados desta sessão:\n\n' +
+      '• Histórico de conversas\n' +
+      '• Arquivo carregado\n' +
+      '• Mensagens do chat\n\n' +
+      'Deseja continuar?'
+    );
 
-    setChatMessages([]);
-    setUploadedFile(null);
-    setUserHistory([]);
-    alert('Dados limpos com sucesso.');
+    if (confirmClear) {
+      try {
+        // Limpa histórico no servidor
+        await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, { method: 'DELETE' });
+      } catch (error) {
+        console.error('Erro ao limpar histórico no servidor:', error);
+      }
+
+      // Limpa dados locais
+      setChatMessages([]);
+      setUploadedFile(null);
+      setUserHistory([]);
+      setCurrentMessage('');
+      setSuggestions([]);
+
+      alert('Dados da sessão limpos com sucesso.');
+    }
   }, [API_BASE_URL, defaultUser.email]);
+
+  // === NOVA SESSÃO ===
+  const handleNewSession = useCallback(() => {
+    const confirmNew = window.confirm(
+      'Isso irá criar uma nova sessão completamente isolada:\n\n' +
+      '• Nova identidade de usuário\n' +
+      '• Histórico independente\n' +
+      '• Dados não compartilhados\n\n' +
+      'Deseja continuar?'
+    );
+
+    if (confirmNew) {
+      // Remove session ID atual
+      localStorage.removeItem('askfile_session_id');
+      
+      // Recarrega a página para gerar nova sessão
+      window.location.reload();
+    }
+  }, []);
 
   // === PROPS COMPARTILHADAS ===
   const sharedProps = {
@@ -263,6 +315,7 @@ const AskFileSystem = () => {
     setSuggestions,
     quickSuggestions,
     handleLogout,
+    handleNewSession,  // NOVO: Nova função
     handleInputChange,
     handleSendMessage,
     handleKeyDown,
@@ -273,7 +326,8 @@ const AskFileSystem = () => {
     uploadedFile,
     setUploadedFile,
     fileProcessing,
-    fetchUserHistory
+    fetchUserHistory,
+    sessionId: userSessionId  // NOVO: passa o session ID
   };
 
   // === RENDERIZAÇÃO ===

@@ -1,4 +1,4 @@
-// === CHATVIEW.JS CORRIGIDO ===
+// === CHATVIEW.JS MODIFICADO ===
 
 import React, { useRef } from 'react';
 import {
@@ -12,7 +12,8 @@ import {
   CheckCircle,
   RotateCcw,
   Clock,
-  Database
+  Database,
+  Plus
 } from 'lucide-react';
 import './ChatView.css';
 
@@ -25,15 +26,17 @@ const ChatView = ({
   suggestions,
   quickSuggestions,
   handleLogout,
+  handleNewSession,  // NOVO: Função para nova sessão
   handleInputChange,
   handleSendMessage,
   handleKeyDown,
   copyToClipboard,
   handleFileUpload,
-  handleChangeFile, // NOVA PROP ADICIONADA
+  handleChangeFile,
   uploadedFile,
   fileProcessing,
-  fetchUserHistory
+  fetchUserHistory,
+  sessionId  // NOVO: ID da sessão
 }) => {
   const fileInputRef = useRef(null);
 
@@ -56,7 +59,7 @@ const ChatView = ({
     event.target.value = '';
   };
 
-  // CORREÇÃO: Função específica para trocar arquivo
+  // Função específica para trocar arquivo
   const handleChangeFileClick = () => {
     if (handleChangeFile) {
       handleChangeFile();
@@ -98,6 +101,15 @@ const ChatView = ({
               <History size={20} />
             </button>
 
+            {/* NOVO: Botão para nova sessão */}
+            <button
+              onClick={handleNewSession}
+              className="header-button"
+              title="Iniciar nova sessão (dados isolados)"
+            >
+              <Plus size={20} />
+            </button>
+
             <div className="user-info">
               <img 
                 src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.name || 'User')}&backgroundColor=0891b2&radius=50`}
@@ -118,6 +130,10 @@ const ChatView = ({
                       Arquivo indexado
                     </span>
                   ) : 'Nenhum arquivo'}
+                </div>
+                {/* NOVO: Mostra ID da sessão */}
+                <div style={{fontSize: '0.6rem', color: '#6b7280', marginTop: '2px'}}>
+                  Sessão: {sessionId ? sessionId.substring(0, 12) + '...' : 'N/A'}
                 </div>
               </div>
               <button
@@ -173,6 +189,13 @@ const ChatView = ({
                   <div className="upload-notice" style={{marginTop: '1rem', backgroundColor: '#f0f9ff', borderColor: '#0891b2'}}>
                     <AlertCircle size={16} className="notice-icon" style={{color: '#0891b2'}} />
                     <p style={{color: '#0c4a6e'}}>
+                      <strong>Sessão privada:</strong> Seus dados ficam isolados nesta sessão. Use o botão "+" para criar uma nova sessão independente.
+                    </p>
+                  </div>
+                  
+                  <div className="upload-notice" style={{marginTop: '1rem', backgroundColor: '#f0f9ff', borderColor: '#0891b2'}}>
+                    <AlertCircle size={16} className="notice-icon" style={{color: '#0891b2'}} />
+                    <p style={{color: '#0c4a6e'}}>
                       <strong>Requisitos:</strong> Arquivos PDF com texto (máx. 50MB). PDFs apenas com imagens não são suportados.
                     </p>
                   </div>
@@ -204,6 +227,10 @@ const ChatView = ({
                         Arquivo físico removido - dados indexados para consultas
                       </p>
                     )}
+                    {/* NOVO: Mostra informação da sessão */}
+                    <p style={{fontSize: '0.7rem', color: '#6b7280', marginTop: '0.5rem'}}>
+                      Sessão privada: {sessionId ? sessionId.substring(0, 20) + '...' : 'N/A'}
+                    </p>
                   </div>
                 </div>
                 
@@ -231,7 +258,6 @@ const ChatView = ({
                   </div>
                 </div>
 
-                {/* CORREÇÃO: Usar a nova função para trocar arquivo */}
                 <button
                   onClick={handleChangeFileClick}
                   className="change-file-button"
@@ -319,7 +345,6 @@ const ChatView = ({
             <Database size={14} />
             <span>Consultando dados de: {uploadedFile.name}</span>
             <div>
-              {/* CORREÇÃO: Usar a nova função para trocar arquivo */}
               <button 
                 onClick={handleChangeFileClick}
                 className="change-file-btn"

@@ -12,13 +12,13 @@ DEFAULT_USER_EMAIL = "usuario@askfile.com"
 @router.get("")
 async def get_history(user_email: Optional[str] = Query(default=DEFAULT_USER_EMAIL)):
     """
-    Obtém o histórico de conversas do usuário
+    Obtém o histórico de conversas do usuário específico
     """
     try:
         # Importa a função do chat.py
         from routes.chat import get_user_history
         
-        # Usa email padrão se não fornecido
+        # MODIFICADO: Usa email específico fornecido ou padrão
         email = user_email or DEFAULT_USER_EMAIL
         
         history = get_user_history(email)
@@ -38,13 +38,13 @@ async def get_history(user_email: Optional[str] = Query(default=DEFAULT_USER_EMA
 @router.delete("")
 async def clear_history(user_email: Optional[str] = Query(default=DEFAULT_USER_EMAIL)):
     """
-    Limpa o histórico de conversas do usuário
+    Limpa o histórico de conversas do usuário específico
     """
     try:
         # Importa o storage do chat.py
         from routes.chat import history_storage
         
-        # Usa email padrão se não fornecido
+        # MODIFICADO: Usa email específico fornecido ou padrão
         email = user_email or DEFAULT_USER_EMAIL
         
         if email in history_storage:
@@ -83,8 +83,9 @@ async def history_status():
             "status": "ok",
             "total_users": total_users,
             "total_items": total_items,
-            "storage_type": "in_memory",
-            "default_user": DEFAULT_USER_EMAIL
+            "storage_type": "in_memory_by_user",  # MODIFICADO
+            "default_user": DEFAULT_USER_EMAIL,
+            "session_isolation": True  # NOVO: Confirma isolamento por sessão
         }
         
     except Exception as e:
