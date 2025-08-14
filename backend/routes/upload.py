@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, HTTPException, status, Form
+from typing import Optional
 import os
 import uuid
 import json
@@ -264,9 +265,12 @@ def create_text_chunks(text: str, chunk_size: int = 1000, overlap: int = 150) ->
         return emergency_chunks
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(
+    file: UploadFile = File(...),
+    user_email: Optional[str] = Form(default=DEFAULT_USER_EMAIL)  # MODIFICADO: Aceita user_email
+):
     """
-    Upload e processamento de PDF com melhorias
+    Upload e processamento de PDF com sistema de sessões
     """
     # Validações
     if not file.filename.lower().endswith('.pdf'):
@@ -275,7 +279,9 @@ async def upload_file(file: UploadFile = File(...)):
             detail="Apenas arquivos PDF são aceitos"
         )
 
-    user_email = DEFAULT_USER_EMAIL
+    # MODIFICADO: Usa user_email fornecido ou padrão
+    current_user_email = user_email or DEFAULT_USER_EMAIL
+    
     file_path = None
     
     try:
@@ -301,7 +307,7 @@ async def upload_file(file: UploadFile = File(...)):
                         )
                     buffer.write(chunk)
                     
-            logger.info(f" Arquivo salvo: {file_path} ({file_size:,} bytes)")
+            logger.info(f" Arquivo salvo: {file_path} ({file_size:,} bytes) - Usuário: {current_user_email}")
             
             # Verifica se o arquivo foi realmente criado
             if not os.path.exists(file_path):
@@ -336,9 +342,9 @@ async def upload_file(file: UploadFile = File(...)):
         # Salva chunks no chat.py
         try:
             from routes.chat import save_text_chunks
-            save_success = save_text_chunks(file_id, chunks, user_email)
+            save_success = save_text_chunks(file_id, chunks, current_user_email)  # MODIFICADO: Passa user_email
             if save_success:
-                logger.info(f" Chunks salvos no sistema de chat")
+                logger.info(f" Chunks salvos no sistema de chat para usuário: {current_user_email}")
             else:
                 logger.warning(f" Falha ao salvar chunks no sistema de chat")
         except Exception as e:
@@ -354,11 +360,11 @@ async def upload_file(file: UploadFile = File(...)):
             logger.warning(f" Não foi possível remover arquivo: {e}")
             file_removed = False
         
-        # Salva dados do arquivo
-        if user_email not in user_files_data:
-            user_files_data[user_email] = {}
+        # MODIFICADO: Salva dados do arquivo usando user_email como chave
+        if current_user_email not in user_files_data:
+            user_files_data[current_user_email] = {}
         
-        user_files_data[user_email][file_id] = {
+        user_files_data[current_user_email][file_id] = {
             'original_name': file.filename,
             'file_path': file_path if not file_removed else None,
             'summary': summary,
@@ -377,7 +383,7 @@ async def upload_file(file: UploadFile = File(...)):
         
         save_user_files_data()
         
-        logger.info(f" Processamento concluído: {file.filename}")
+        logger.info(f" Processamento concluído: {file.filename} para usuário: {current_user_email}")
         
         return {
             "file_id": file_id,
@@ -389,6 +395,7 @@ async def upload_file(file: UploadFile = File(...)):
             "status": "success",
             "message": f"✅ Arquivo '{file.filename}' processado com sucesso!",
             "file_removed": file_removed,
+            "user_email": current_user_email,  # NOVO: Retorna o user_email usado
             "processing_stats": {
                 "pages_processed": text_content.count('=== Página'),
                 "text_length": len(text_content),
@@ -413,15 +420,16 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
 @router.get("/user-files")
-async def get_user_files():
-    """Lista arquivos do usuário"""
-    user_email = DEFAULT_USER_EMAIL
+async def get_user_files(user_email: Optional[str] = DEFAULT_USER_EMAIL):
+    """Lista arquivos do usuário específico"""
     
-    if user_email not in user_files_data:
-        return {"files": []}
+    current_user_email = user_email or DEFAULT_USER_EMAIL
+    
+    if current_user_email not in user_files_data:
+        return {"files": [], "user_email": current_user_email}
     
     files = []
-    for file_id, file_data in user_files_data[user_email].items():
+    for file_id, file_data in user_files_data[current_user_email].items():
         files.append({
             "file_id": file_id,
             "original_name": file_data["original_name"],
@@ -433,21 +441,22 @@ async def get_user_files():
             "processing_stats": file_data.get("processing_stats", {})
         })
     
-    return {"files": files}
+    return {"files": files, "user_email": current_user_email}
 
 @router.delete("/{file_id}")
-async def delete_file(file_id: str):
-    """Remove arquivo e seus dados"""
-    user_email = DEFAULT_USER_EMAIL
+async def delete_file(file_id: str, user_email: Optional[str] = DEFAULT_USER_EMAIL):
+    """Remove arquivo e seus dados do usuário específico"""
     
-    if user_email not in user_files_data or file_id not in user_files_data[user_email]:
+    current_user_email = user_email or DEFAULT_USER_EMAIL
+    
+    if current_user_email not in user_files_data or file_id not in user_files_data[current_user_email]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Arquivo não encontrado"
+            detail="Arquivo não encontrado para este usuário"
         )
     
     try:
-        file_data = user_files_data[user_email][file_id]
+        file_data = user_files_data[current_user_email][file_id]
         
         # Remove arquivo físico se ainda existir
         if file_data.get("file_path") and os.path.exists(file_data["file_path"]):
@@ -457,7 +466,7 @@ async def delete_file(file_id: str):
         # Remove chunks do sistema de chat
         try:
             from routes.chat import text_storage
-            storage_key = f"{user_email}_{file_id}"
+            storage_key = f"{current_user_email}_{file_id}"
             if storage_key in text_storage:
                 del text_storage[storage_key]
                 logger.info(f" Chunks removidos do chat")
@@ -465,15 +474,16 @@ async def delete_file(file_id: str):
             logger.warning(f" Erro ao remover chunks do chat: {e}")
         
         # Remove dados do arquivo
-        del user_files_data[user_email][file_id]
+        del user_files_data[current_user_email][file_id]
         save_user_files_data()
         
-        logger.info(f" Arquivo {file_id} removido completamente")
+        logger.info(f" Arquivo {file_id} removido completamente para usuário: {current_user_email}")
         
         return {
             "success": True, 
             "message": "Arquivo removido com sucesso",
-            "file_id": file_id
+            "file_id": file_id,
+            "user_email": current_user_email
         }
         
     except Exception as e:
@@ -503,7 +513,8 @@ async def upload_status():
             "groq": groq_status,
             "pdf_processing": True,
             "text_chunking": True,
-            "upload_directory": os.path.exists(UPLOAD_DIR)
+            "upload_directory": os.path.exists(UPLOAD_DIR),
+            "session_isolation": True  # NOVO: Indica suporte a sessões
         },
         "details": {
             "groq_model": "llama3-8b-8192" if groq_status else "Não disponível",
@@ -511,12 +522,14 @@ async def upload_status():
             "upload_directory": UPLOAD_DIR,
             "total_files_processed": total_files,
             "total_chunks_created": total_chunks,
+            "total_users": len(user_files_data),  # NOVO: Total de usuários únicos
             "improvements": [
                 "chunks_otimizados",
                 "processamento_melhorado", 
                 "remocao_automatica_arquivos",
                 "estatisticas_detalhadas",
-                "tratamento_robusto_erros"
+                "tratamento_robusto_erros",
+                "isolamento_por_sessao"  # NOVO
             ]
         }
     }
