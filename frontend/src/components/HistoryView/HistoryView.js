@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
-import { History, LogOut, Clock, MessageSquare, FileText, Copy, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { History, Clock, MessageSquare, FileText, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import './HistoryView.css';
  
 const HistoryView = ({
   setCurrentView,
   userHistory,
-  handleLogout,
-  copyToClipboard
+  copyToClipboard,
+  fetchUserHistory,
+  isLoading
 }) => {
   const [expandedItems, setExpandedItems] = useState(new Set());
  
+  // Busca o histórico quando o componente é montado
+  useEffect(() => {
+    if (fetchUserHistory) {
+      fetchUserHistory();
+    }
+  }, [fetchUserHistory]);
+
   const toggleExpanded = (index) => {
     const newExpanded = new Set(expandedItems);
     if (newExpanded.has(index)) {
@@ -37,19 +45,17 @@ const HistoryView = ({
               Histórico de Consultas
             </h1>
           </div>
-          
-          <button
-            onClick={handleLogout}
-            className="header-button"
-          >
-            <LogOut size={20} />
-          </button>
         </div>
       </header>
  
       {/* Conteúdo */}
       <div className="history-content">
-        {!userHistory || userHistory.length === 0 ? (
+        {isLoading ? (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <div className="spinner-dark"></div>
+            <p>Carregando histórico...</p>
+          </div>
+        ) : !userHistory || userHistory.length === 0 ? (
           <div className="empty-history">
             <FileText className="empty-history-icon" />
             <h3 className="empty-history-title">Nenhuma consulta realizada</h3>

@@ -29,7 +29,8 @@ const ChatView = ({
   copyToClipboard,
   handleFileUpload,
   uploadedFile,
-  fileProcessing
+  fileProcessing,
+  fetchUserHistory
 }) => {
   const fileInputRef = useRef(null);
 
@@ -43,13 +44,21 @@ const ChatView = ({
     const file = event.target.files[0];
     if (file) {
       if (file.type !== 'application/pdf') {
-        alert('⚠️ Apenas arquivos PDF são aceitos!\n\n📋 Requisitos:\n• Formato: PDF\n• Tamanho máximo: 50MB\n• Conteúdo: Texto (não apenas imagens)\n\n🔒 Privacidade: O arquivo será processado e removido do servidor automaticamente.');
+        alert('Apenas arquivos PDF são aceitos!\n\nRequisitos:\n• Formato: PDF\n• Tamanho máximo: 50MB\n• Conteúdo: Texto (não apenas imagens)\n\nPrivacidade: O arquivo será processado e removido do servidor automaticamente.');
         return;
       }
       handleFileUpload(file);
     }
     // Limpa o input para permitir re-upload do mesmo arquivo
     event.target.value = '';
+  };
+
+  // Função para ir ao histórico
+  const handleHistoryClick = () => {
+    if (fetchUserHistory) {
+      fetchUserHistory();
+    }
+    setCurrentView('history');
   };
 
   return (
@@ -69,7 +78,7 @@ const ChatView = ({
 
           <div className="header-right">
             <button
-              onClick={() => setCurrentView('history')}
+              onClick={handleHistoryClick}
               className="header-button"
               title="Ver Histórico da Sessão"
             >
@@ -143,7 +152,7 @@ const ChatView = ({
                   <div className="upload-notice">
                     <AlertCircle size={16} className="notice-icon" />
                     <p>
-                      <strong>🔒 Privacidade garantida:</strong> Seu arquivo será processado e automaticamente removido do servidor. 
+                      <strong>Privacidade garantida:</strong> Seu arquivo será processado e automaticamente removido do servidor. 
                       Apenas os dados necessários para as consultas são mantidos em formato indexado.
                     </p>
                   </div>
@@ -151,7 +160,7 @@ const ChatView = ({
                   <div className="upload-notice" style={{marginTop: '1rem', backgroundColor: '#f0f9ff', borderColor: '#0891b2'}}>
                     <AlertCircle size={16} className="notice-icon" style={{color: '#0891b2'}} />
                     <p style={{color: '#0c4a6e'}}>
-                      <strong>📋 Requisitos:</strong> Arquivos PDF com texto (máx. 50MB). PDFs apenas com imagens não são suportados.
+                      <strong>Requisitos:</strong> Arquivos PDF com texto (máx. 50MB). PDFs apenas com imagens não são suportados.
                     </p>
                   </div>
                 </div>
@@ -244,7 +253,7 @@ const ChatView = ({
                             "{source.content?.substring(0, 150)}..."
                             {source.filename && (
                               <span style={{display: 'block', fontSize: '0.75rem', color: '#6b7280', marginTop: '2px'}}>
-                                📄 {source.filename}
+                                {source.filename}
                               </span>
                             )}
                           </span>
@@ -269,7 +278,7 @@ const ChatView = ({
 
                 {message.sender === 'bot' && (
                   <div className="message-disclaimer">
-                    <span>💡 O AskFile pode cometer erros. Sempre confira as informações importantes.</span>
+                    <span>O AskFile pode cometer erros. Sempre confira as informações importantes.</span>
                   </div>
                 )}
               </div>
@@ -358,8 +367,8 @@ const ChatView = ({
         <div className="input-tip">
           <span>
             {uploadedFile 
-              ? `💬 Dados indexados de: ${uploadedFile.name} | 🔒 Arquivo físico removido por segurança` 
-              : '📁 Faça upload de um PDF para começar a fazer perguntas'
+              ? `Dados indexados de: ${uploadedFile.name} | Arquivo físico removido por segurança` 
+              : 'Faça upload de um PDF para começar a fazer perguntas'
             }
           </span>
         </div>
