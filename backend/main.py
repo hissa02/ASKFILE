@@ -25,7 +25,7 @@ app.add_middleware(
         "http://localhost:3000",
         "https://askfile-seven.vercel.app",  # Seu domínio específico
         "https://*.vercel.app",
-        "https://askfile-production.up.railway.app"
+        "https://askfile.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
