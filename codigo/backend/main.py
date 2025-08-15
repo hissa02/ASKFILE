@@ -18,17 +18,20 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Configuração do CORS - CORRIGIDA para Vercel
+# Configuração do CORS - CORRIGIDA para todos os domínios Vercel
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://askfile-seven.vercel.app",  # Seu domínio específico
+        "https://askfile.vercel.app",
+        "https://askfile-seven.vercel.app",
+        "https://askfile-*.vercel.app",
         "https://*.vercel.app",
-        "https://askfile.onrender.com"
+        "https://askfile.onrender.com",
+        "*"  # Temporariamente permite todos os origins
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition"]
 )
@@ -60,7 +63,8 @@ async def health_check():
         ],
         "services": ["chat", "upload", "history"],
         "storage_mode": "temporary_processing",
-        "authentication": "disabled"
+        "authentication": "disabled",
+        "cors": "enabled_for_all_origins"
     }
 
 # Rota de informações sobre o sistema
@@ -83,16 +87,32 @@ async def system_info():
             "history": True,
             "user_authentication": False,
             "file_storage": False
-        }
+        },
+        "cors_enabled": True
     }
 
 # Middleware para log de requisições
 @app.middleware("http")
 async def log_requests(request, call_next):
     start_time = time.time()
+    
+    # Log da requisição
+    client_host = request.client.host if request.client else "unknown"
+    logger.info(f"Request: {request.method} {request.url.path} from {client_host}")
+    
     response = await call_next(request)
     process_time = time.time() - start_time
+    
     logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.4f}s")
+    return response
+
+# Middleware adicional para CORS
+@app.middleware("http")
+async def add_cors_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
 # Execução local
@@ -101,4 +121,5 @@ if __name__ == "__main__":
     logger.info("=== Iniciando AskFile API v2.0 ===")
     logger.info("Modo: Processamento temporário sem autenticação")
     logger.info("Recursos: Upload PDF + Chat IA + Histórico em memória")
+    logger.info("CORS: Habilitado para todos os origins")
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

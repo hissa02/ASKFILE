@@ -30,7 +30,7 @@ const AskFileSystem = () => {
     return sessionId;
   });
 
-  // === CONFIGURAÇÕES ===
+  // === CONFIGURAÇÕES - URL CORRIGIDA ===
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://askfile.onrender.com';
 
   // === USUÁRIO FICTÍCIO COM ID ÚNICO ===
@@ -93,9 +93,15 @@ const AskFileSystem = () => {
     setCurrentMessage('');
 
     try {
+      console.log('Enviando requisição para:', `${API_BASE_URL}/api/chat`);
+      
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        mode: 'cors',
         body: JSON.stringify({
           question: questionToSend,
           file_id: uploadedFile.id,
@@ -103,7 +109,10 @@ const AskFileSystem = () => {
         }),
       });
 
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
 
       const data = await response.json();
       console.log("Resposta da API:", data);
@@ -124,7 +133,7 @@ const AskFileSystem = () => {
         ...prevMessages,
         {
           id: prevMessages.length + 2,
-          text: `Desculpe, não consegui obter uma resposta. (Erro: ${error.message})`,
+          text: `Desculpe, não consegui obter uma resposta. Erro: ${error.message}`,
           sender: 'bot',
           timestamp: new Date().toLocaleTimeString(),
           isError: true,
@@ -149,7 +158,7 @@ const AskFileSystem = () => {
     }).catch(err => console.error('Erro ao copiar texto: ', err));
   }, []);
 
-  // === UPLOAD ===
+  // === UPLOAD MELHORADO ===
   const handleFileUpload = useCallback(async (file) => {
     if (!file) {
       alert("Nenhum arquivo selecionado.");
@@ -170,18 +179,27 @@ const AskFileSystem = () => {
     setFileProcessing(true);
 
     try {
+      console.log('Enviando upload para:', `${API_BASE_URL}/api/upload`);
+      
       const formData = new FormData();
       formData.append('file', file);
       formData.append('user_email', defaultUser.email);
 
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
+        mode: 'cors',
         body: formData,
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
 
-      if (response.ok) {
+      const data = await response.json();
+      console.log("Resposta do upload:", data);
+
+      if (data.file_id) {
         setUploadedFile({
           id: data.file_id,
           name: file.name,
@@ -193,7 +211,7 @@ const AskFileSystem = () => {
         alert(`Arquivo "${file.name}" processado com sucesso!`);
         console.log('Novo arquivo carregado para sessão:', userSessionId);
       } else {
-        throw new Error(data.detail || `Erro ao processar arquivo: ${response.statusText}`);
+        throw new Error('Resposta inválida do servidor');
       }
     } catch (error) {
       console.error('Erro no upload:', error);
@@ -234,12 +252,25 @@ const AskFileSystem = () => {
     }
   }, [handleFileUpload]);
 
-  // === HISTÓRICO ===
+  // === HISTÓRICO MELHORADO ===
   const fetchUserHistory = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      console.log('Buscando histórico de:', `${API_BASE_URL}/api/history`);
+      
+      const response = await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        },
+        mode: 'cors'
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
       const data = await response.json();
       setUserHistory(data.history || []);
     } catch (error) {
@@ -250,7 +281,7 @@ const AskFileSystem = () => {
     }
   }, [API_BASE_URL, defaultUser.email]);
 
-  // === LOGOUT/LIMPAR DADOS ===
+  // === LOGOUT/LIMPAR DADOS MELHORADO ===
   const handleLogout = useCallback(async () => {
     const confirmClear = window.confirm(
       'Isso irá limpar todos os dados desta sessão:\n\n' +
@@ -263,7 +294,10 @@ const AskFileSystem = () => {
     if (confirmClear) {
       try {
         // Limpa histórico no servidor
-        await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, { method: 'DELETE' });
+        await fetch(`${API_BASE_URL}/api/history?user_email=${defaultUser.email}`, { 
+          method: 'DELETE',
+          mode: 'cors' 
+        });
       } catch (error) {
         console.error('Erro ao limpar histórico no servidor:', error);
       }
