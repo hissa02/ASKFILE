@@ -236,5 +236,23 @@
         "max_chunk_size": 997
       }
     }
+  },
+  "user_1755190467501_1tu7uaiq7@askfile.com": {
+    "20250815_56bbfaa3": {
+      "original_name": "Codigos_fontes.pdf",
+      "file_path": null,
+      "summary": "**Resumo**\n\nO documento \"Codigos_fontes.pdf\" é um arquivo de diagrama de fluxo de processos (Use Case) que descreve os principais cenários e funcionalidades de um sistema de avaliação de respostas. O objetivo principal do documento é apresentar a estrutura e o funcionamento do sistema, permitindo que os desenvolvedores e stakeholders compreendam melhor as necessidades e requisitos do sistema.\n\nO documento é composto por cinco seções principais: Avaliar Resposta, Cadastro e Login, Gerenciar Resoluções, Histórico e Fazer Pergunta. Cada seção apresenta um diagrama de fluxo de processos que descreve as interações entre os usuários e o sistema, bem como as funcionalidades e requisitos do sistema.\n\nOs principais dados importantes apresentados no documento incluem a criação de contas, login, avaliação de respostas, gerenciamento de resoluções, histórico de perguntas e respostas, e processamento de perguntas. Além disso, o documento destaca a importância da validação de dados e credenciais, bem como a necessidade de atualizar a base vetorial e consultar a Linguagem de Linguagem de Linguagem (LLM).\n\nEm conclusão, o documento \"Codigos_fontes.pdf\" é uma ferramenta valiosa para os desenvolvedores e stakeholders que buscam entender melhor o funcionamento e as necessidades do sistema de avaliação de respostas. O documento apresenta uma visão clara e detalhada das funcionalidades e requisitos do sistema, permitindo que os desenvolvedores criem uma solução mais eficaz e eficiente.",
+      "upload_date": "2025-08-15T20:23:53.433448",
+      "file_size": 49911,
+      "chunks_count": 6,
+      "text_length": 1921,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 2,
+        "avg_chunk_size": 687,
+        "min_chunk_size": 169,
+        "max_chunk_size": 991
+      }
+    }
   }
 }
