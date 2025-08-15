@@ -19,7 +19,7 @@ const AskFileSystem = () => {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [fileProcessing, setFileProcessing] = useState(false);
   
-  // === NOVO: ID ÚNICO POR USUÁRIO/SESSÃO ===
+  // === ID ÚNICO POR USUÁRIO/SESSÃO ===
   const [userSessionId] = useState(() => {
     // Verifica se já existe um ID salvo no localStorage
     let sessionId = localStorage.getItem('askfile_session_id');
@@ -99,7 +99,7 @@ const AskFileSystem = () => {
         body: JSON.stringify({
           question: questionToSend,
           file_id: uploadedFile.id,
-          user_email: defaultUser.email  // MODIFICADO: Usa o email único
+          user_email: defaultUser.email
         }),
       });
 
@@ -149,7 +149,7 @@ const AskFileSystem = () => {
     }).catch(err => console.error('Erro ao copiar texto: ', err));
   }, []);
 
-  // === UPLOAD MODIFICADO ===
+  // === UPLOAD ===
   const handleFileUpload = useCallback(async (file) => {
     if (!file) {
       alert("Nenhum arquivo selecionado.");
@@ -172,7 +172,7 @@ const AskFileSystem = () => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('user_email', defaultUser.email);  // NOVO: Adiciona o email único
+      formData.append('user_email', defaultUser.email);
 
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
@@ -279,25 +279,6 @@ const AskFileSystem = () => {
     }
   }, [API_BASE_URL, defaultUser.email]);
 
-  // === NOVA SESSÃO ===
-  const handleNewSession = useCallback(() => {
-    const confirmNew = window.confirm(
-      'Isso irá criar uma nova sessão completamente isolada:\n\n' +
-      '• Nova identidade de usuário\n' +
-      '• Histórico independente\n' +
-      '• Dados não compartilhados\n\n' +
-      'Deseja continuar?'
-    );
-
-    if (confirmNew) {
-      // Remove session ID atual
-      localStorage.removeItem('askfile_session_id');
-      
-      // Recarrega a página para gerar nova sessão
-      window.location.reload();
-    }
-  }, []);
-
   // === PROPS COMPARTILHADAS ===
   const sharedProps = {
     user: defaultUser,
@@ -315,7 +296,6 @@ const AskFileSystem = () => {
     setSuggestions,
     quickSuggestions,
     handleLogout,
-    handleNewSession,  // NOVO: Nova função
     handleInputChange,
     handleSendMessage,
     handleKeyDown,
@@ -327,7 +307,7 @@ const AskFileSystem = () => {
     setUploadedFile,
     fileProcessing,
     fetchUserHistory,
-    sessionId: userSessionId  // NOVO: passa o session ID
+    sessionId: userSessionId
   };
 
   // === RENDERIZAÇÃO ===

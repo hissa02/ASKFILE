@@ -11,9 +11,7 @@ import {
   AlertCircle,
   CheckCircle,
   RotateCcw,
-  Clock,
-  Database,
-  Plus
+  Clock
 } from 'lucide-react';
 import './ChatView.css';
 
@@ -26,7 +24,6 @@ const ChatView = ({
   suggestions,
   quickSuggestions,
   handleLogout,
-  handleNewSession,  // NOVO: Função para nova sessão
   handleInputChange,
   handleSendMessage,
   handleKeyDown,
@@ -36,7 +33,7 @@ const ChatView = ({
   uploadedFile,
   fileProcessing,
   fetchUserHistory,
-  sessionId  // NOVO: ID da sessão
+  sessionId
 }) => {
   const fileInputRef = useRef(null);
 
@@ -101,49 +98,13 @@ const ChatView = ({
               <History size={20} />
             </button>
 
-            {/* NOVO: Botão para nova sessão */}
             <button
-              onClick={handleNewSession}
+              onClick={handleLogout}
               className="header-button"
-              title="Iniciar nova sessão (dados isolados)"
+              title="Limpar dados da sessão"
             >
-              <Plus size={20} />
+              <RotateCcw size={20} />
             </button>
-
-            <div className="user-info">
-              <img 
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.name || 'User')}&backgroundColor=0891b2&radius=50`}
-                alt="Avatar do usuário" 
-                className="user-avatar"
-                onError={(e) => {
-                  e.target.src = `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(user?.name || 'User')}&backgroundColor=0891b2`;
-                }}
-              />
-              <div className="user-details">
-                <div className="user-name">
-                  {user?.name || 'Usuário AskFile'}
-                </div>
-                <div className="user-role">
-                  {uploadedFile ? (
-                    <span style={{color: '#10b981'}}>
-                      <Database size={12} style={{display: 'inline', marginRight: '4px'}} />
-                      Arquivo indexado
-                    </span>
-                  ) : 'Nenhum arquivo'}
-                </div>
-                {/* NOVO: Mostra ID da sessão */}
-                <div style={{fontSize: '0.6rem', color: '#6b7280', marginTop: '2px'}}>
-                  Sessão: {sessionId ? sessionId.substring(0, 12) + '...' : 'N/A'}
-                </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="header-button"
-                title="Limpar dados da sessão"
-              >
-                <RotateCcw size={20} />
-              </button>
-            </div>
           </div>
         </div>
       </header>
@@ -189,7 +150,7 @@ const ChatView = ({
                   <div className="upload-notice" style={{marginTop: '1rem', backgroundColor: '#f0f9ff', borderColor: '#0891b2'}}>
                     <AlertCircle size={16} className="notice-icon" style={{color: '#0891b2'}} />
                     <p style={{color: '#0c4a6e'}}>
-                      <strong>Sessão privada:</strong> Seus dados ficam isolados nesta sessão. Use o botão "+" para criar uma nova sessão independente.
+                      <strong>Sessão privada:</strong> Seus dados ficam isolados nesta sessão. Use o botão de limpar (🔄) no cabeçalho para reiniciar completamente.
                     </p>
                   </div>
                   
@@ -227,10 +188,6 @@ const ChatView = ({
                         Arquivo físico removido - dados indexados para consultas
                       </p>
                     )}
-                    {/* NOVO: Mostra informação da sessão */}
-                    <p style={{fontSize: '0.7rem', color: '#6b7280', marginTop: '0.5rem'}}>
-                      Sessão privada: {sessionId ? sessionId.substring(0, 20) + '...' : 'N/A'}
-                    </p>
                   </div>
                 </div>
                 
@@ -342,7 +299,7 @@ const ChatView = ({
         {/* Informação do arquivo atual */}
         {uploadedFile && (
           <div className="current-file-indicator">
-            <Database size={14} />
+            <FileText size={14} />
             <span>Consultando dados de: {uploadedFile.name}</span>
             <div>
               <button 
