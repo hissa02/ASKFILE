@@ -22,11 +22,11 @@ USER_DATA_FILE = "user_files_data.json"
 # Garante que o diretório existe
 try:
     os.makedirs(UPLOAD_DIR, exist_ok=True)
-    logger.info(f" Diretório de upload: {os.path.abspath(UPLOAD_DIR)}")
+    logger.info(f"Diretório de upload: {os.path.abspath(UPLOAD_DIR)}")
 except Exception as e:
-    logger.error(f" Erro ao criar diretório: {e}")
+    logger.error(f"Erro ao criar diretório: {e}")
 
-MAX_FILE_SIZE = 25 * 1024 * 1024  # 25MB para ser mais leve
+MAX_FILE_SIZE = 25 * 1024 * 1024  # 25MB
 
 # Email padrão
 DEFAULT_USER_EMAIL = "usuario@askfile.com"
@@ -62,11 +62,11 @@ def save_user_files_data():
 load_user_files_data()
 
 def extract_text_from_pdf(file_path: str) -> str:
-    """Extrai texto do PDF com melhor tratamento"""
+    """Extrai texto do PDF preservando estrutura para análise"""
     try:
         reader = PdfReader(file_path)
         text_parts = []
-        max_pages = 50  # Aumenta limite de páginas
+        max_pages = 50
         
         total_pages = min(len(reader.pages), max_pages)
         
@@ -76,20 +76,25 @@ def extract_text_from_pdf(file_path: str) -> str:
                 page_text = page.extract_text()
                 
                 if page_text and page_text.strip():
-                    # Limpa o texto
+                    # Preserva estrutura original mais cuidadosamente
                     page_text = page_text.strip()
                     
-                    # Remove quebras de linha excessivas
-                    page_text = re.sub(r'\n\s*\n', '\n\n', page_text)
+                    # Normaliza quebras mas preserva informações importantes
+                    page_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', page_text)
+                    page_text = re.sub(r'[ \t]+', ' ', page_text)
                     
-                    # Remove espaços múltiplos
-                    page_text = re.sub(r' +', ' ', page_text)
+                    # Marca campos importantes para evitar confusão
+                    page_text = re.sub(r'Nome:\s*([A-ZÁÇÕ\s]+)', r'NOME_PRINCIPAL: \1', page_text)
+                    page_text = re.sub(r'Nome do Pai:\s*([A-Za-záçõ\s]+)', r'NOME_DO_PAI: \1', page_text)
+                    page_text = re.sub(r'Nome da Mãe:\s*([A-Za-záçõ\s]+)', r'NOME_DA_MAE: \1', page_text)
+                    page_text = re.sub(r'Matrícula:\s*(\d+)', r'MATRICULA_NUMERO: \1', page_text)
+                    page_text = re.sub(r'Data de Nascimento:\s*([0-9/]+)', r'DATA_NASCIMENTO: \1', page_text)
+                    page_text = re.sub(r'Curso:\s*([A-ZÁÇÕ\s\-]+)', r'CURSO_NOME: \1', page_text)
                     
-                    # Limita tamanho por página
-                    if len(page_text) > 6000:  # Aumenta limite por página
-                        page_text = page_text[:6000] + "..."
+                    if len(page_text) > 8000:
+                        page_text = page_text[:8000] + "..."
                     
-                    text_parts.append(f"\n=== Página {page_num + 1} ===\n{page_text}")
+                    text_parts.append(f"\n=== PAGINA {page_num + 1} ===\n{page_text}")
                     
             except Exception as e:
                 logger.warning(f"Erro na página {page_num + 1}: {e}")
@@ -99,27 +104,26 @@ def extract_text_from_pdf(file_path: str) -> str:
             raise ValueError("Nenhum texto extraído do PDF")
         
         full_text = '\n\n'.join(text_parts)
-        max_total = 200000  # Aumenta limite total para 200KB
+        max_total = 250000
         
         if len(full_text) > max_total:
             logger.warning(f"Texto truncado de {len(full_text)} para {max_total} chars")
             full_text = full_text[:max_total] + "\n\n[Documento truncado]"
         
-        logger.info(f" Texto extraído: {len(full_text):,} caracteres de {total_pages} páginas")
+        logger.info(f"Texto estruturado extraído: {len(full_text):,} caracteres de {total_pages} páginas")
         return full_text
         
     except Exception as e:
-        logger.error(f" Erro ao extrair texto: {e}")
+        logger.error(f"Erro ao extrair texto: {e}")
         raise HTTPException(status_code=400, detail=f"Erro ao processar PDF: {str(e)}")
 
 def generate_summary(text: str, filename: str) -> str:
     """Gera resumo usando Groq"""
     try:
         if not groq_client:
-            return f" {filename}\n\nArquivo processado com {len(text)} caracteres. Faça perguntas sobre o conteúdo."
+            return f"{filename}\n\nArquivo processado com {len(text)} caracteres. Faça perguntas sobre o conteúdo."
         
-        # Usa uma amostra maior do texto para o resumo
-        text_sample = text[:8000] if len(text) > 8000 else text
+        text_sample = text[:10000] if len(text) > 10000 else text
         
         prompt = f"""Analise este documento PDF e crie um resumo detalhado em português:
 
@@ -140,107 +144,175 @@ Use linguagem clara e objetiva."""
         response = groq_client.chat.completions.create(
             model="llama3-8b-8192",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=600,  # Aumenta limite para resumo mais detalhado
+            max_tokens=700,
             temperature=0.3
         )
         
         summary = response.choices[0].message.content
         
         if not summary or len(summary.strip()) < 50:
-            return f" {filename}\n\nArquivo processado com {len(text)} caracteres. Faça perguntas sobre o conteúdo."
+            return f"{filename}\n\nArquivo processado com {len(text)} caracteres. Faça perguntas sobre o conteúdo."
         
-        logger.info(f" Resumo gerado: {len(summary)} caracteres")
+        logger.info(f"Resumo gerado: {len(summary)} caracteres")
         return summary
         
     except Exception as e:
-        logger.error(f"❌ Erro ao gerar resumo: {e}")
-        return f" {filename}\n\nArquivo processado. Faça perguntas sobre o conteúdo."
+        logger.error(f"Erro ao gerar resumo: {e}")
+        return f"{filename}\n\nArquivo processado. Faça perguntas sobre o conteúdo."
 
-def create_text_chunks(text: str, chunk_size: int = 1000, overlap: int = 150) -> list:
-    """Cria chunks de texto mais inteligentes e otimizados"""
+def create_text_chunks_with_context(text: str, chunk_size: int = 1000, overlap: int = 150) -> list:
+    """
+    Cria chunks preservando contexto estrutural das informações
+    """
     try:
         chunks = []
-        text_length = len(text)
-        start = 0
-        max_chunks = 150  # Aumenta limite de chunks
+        max_chunks = 200
         
-        # Pre-processamento: identifica seções e parágrafos
-        sections = re.split(r'\n=== Página \d+ ===\n', text)
+        # Divide por páginas para manter contexto
+        pages = re.split(r'\n=== PAGINA \d+ ===\n', text)
         processed_chunks = []
         
-        for section in sections:
-            if not section.strip():
+        for page_idx, page_content in enumerate(pages):
+            if not page_content.strip():
                 continue
                 
-            section = section.strip()
-            section_start = 0
+            page_content = page_content.strip()
             
-            while section_start < len(section) and len(processed_chunks) < max_chunks:
-                end = min(section_start + chunk_size, len(section))
-                
-                # Busca quebra natural para evitar cortar palavras/frases
-                if end < len(section):
-                    # Prioridade de quebras: parágrafo > frase > palavra
-                    for separator in ["\n\n", "\n", ". ", "! ", "? ", ": ", "; ", ", "]:
-                        sep_pos = section.rfind(separator, section_start + chunk_size//2, end)
-                        if sep_pos > section_start + chunk_size//3:  # Garante chunk mínimo
-                            end = sep_pos + len(separator)
-                            break
-                
-                chunk_text = section[section_start:end].strip()
-                
-                # Filtra chunks válidos (nem muito pequenos nem muito grandes)
-                if 100 <= len(chunk_text) <= 2500:
-                    # Remove chunks duplicados
-                    if not any(chunk_text in existing for existing in processed_chunks[-3:]):
-                        processed_chunks.append(chunk_text)
-                
-                # Calcula próximo início com overlap
-                section_start = max(end - overlap, section_start + chunk_size//2)
-                
-                if section_start >= len(section):
-                    break
-        
-        # Se não conseguiu chunks bons, faz fallback simples
-        if len(processed_chunks) < 5:
-            logger.warning("Poucos chunks gerados, usando fallback simples")
+            # Identifica blocos de informações relacionadas
+            structural_blocks = []
             
-            words = text.split()
-            current_chunk = []
+            # Bloco de dados pessoais/identificação
+            personal_data_match = re.search(
+                r'(NOME_PRINCIPAL:.*?(?=CURSO_NOME:|Componentes|$))', 
+                page_content, 
+                re.DOTALL | re.IGNORECASE
+            )
+            if personal_data_match:
+                personal_block = personal_data_match.group(1)
+                structural_blocks.append(("IDENTIFICACAO", personal_block))
             
-            for word in words[:5000]:  # Processa mais palavras
-                current_chunk.append(word)
-                
-                if len(' '.join(current_chunk)) > 900:
-                    chunk_text = ' '.join(current_chunk)
-                    if len(chunk_text) > 100:
-                        processed_chunks.append(chunk_text)
-                    # Mantém overlap de palavras
-                    current_chunk = current_chunk[-15:]
+            # Outros blocos estruturais genéricos (tabelas, listas, etc)
+            # Detecta blocos com estrutura similar (linhas com padrões)
+            table_blocks = re.findall(
+                r'(\d{4}[^\n]*\n(?:[^\n]*\n){0,3})',
+                page_content
+            )
+            for i, table in enumerate(table_blocks):
+                if len(table.strip()) > 30:
+                    structural_blocks.append((f"TABELA_{i}", table.strip()))
+            
+            # Processa blocos estruturais
+            for block_type, block_content in structural_blocks:
+                if len(block_content) > 50:
+                    # Adiciona contexto ao chunk
+                    contextualized_chunk = f"[SECAO: {block_type}]\n{block_content}"
                     
-                if len(processed_chunks) >= 120:
+                    # Se muito grande, divide mantendo contexto
+                    if len(contextualized_chunk) > chunk_size:
+                        lines = contextualized_chunk.split('\n')
+                        current_chunk = [f"[SECAO: {block_type}]"]
+                        current_length = len(current_chunk[0])
+                        
+                        for line in lines[1:]:
+                            if current_length + len(line) > chunk_size - 100:
+                                if len(current_chunk) > 1:
+                                    processed_chunks.append('\n'.join(current_chunk))
+                                current_chunk = [f"[SECAO: {block_type}_CONT]", line]
+                                current_length = len(current_chunk[0]) + len(line)
+                            else:
+                                current_chunk.append(line)
+                                current_length += len(line)
+                        
+                        if len(current_chunk) > 1:
+                            processed_chunks.append('\n'.join(current_chunk))
+                    else:
+                        processed_chunks.append(contextualized_chunk)
+            
+            # Processa texto restante
+            remaining_text = page_content
+            for _, block_content in structural_blocks:
+                remaining_text = remaining_text.replace(block_content, '')
+            
+            remaining_text = re.sub(r'\n\s*\n', '\n', remaining_text.strip())
+            
+            if len(remaining_text) > 100:
+                remaining_start = 0
+                while remaining_start < len(remaining_text) and len(processed_chunks) < max_chunks:
+                    end = min(remaining_start + chunk_size, len(remaining_text))
+                    
+                    # Busca quebra natural
+                    if end < len(remaining_text):
+                        for separator in ['\n\n', '\n', '. ', '! ', '? ']:
+                            sep_pos = remaining_text.rfind(separator, remaining_start + chunk_size//2, end)
+                            if sep_pos > remaining_start + 100:
+                                end = sep_pos + len(separator)
+                                break
+                    
+                    chunk_text = remaining_text[remaining_start:end].strip()
+                    
+                    if len(chunk_text) > 80:
+                        contextualized_chunk = f"[SECAO: PAGINA_{page_idx + 1}]\n{chunk_text}"
+                        processed_chunks.append(contextualized_chunk)
+                    
+                    remaining_start = max(end - overlap, remaining_start + chunk_size//2)
+        
+        # Fallback se poucos chunks
+        if len(processed_chunks) < 5:
+            logger.warning("Poucos chunks estruturais, usando fallback")
+            
+            sentences = re.split(r'[.!?]+\s+', text)
+            current_chunk = []
+            current_length = 0
+            
+            for sentence in sentences[:5000]:
+                sentence = sentence.strip()
+                if not sentence:
+                    continue
+                
+                if current_length + len(sentence) > 900 and current_chunk:
+                    chunk_text = '. '.join(current_chunk) + '.'
+                    if len(chunk_text) > 100:
+                        contextualized = f"[SECAO: CONTEUDO_GERAL]\n{chunk_text}"
+                        processed_chunks.append(contextualized)
+                    
+                    current_chunk = current_chunk[-2:] if len(current_chunk) > 2 else []
+                    current_length = sum(len(s) for s in current_chunk)
+                
+                current_chunk.append(sentence)
+                current_length += len(sentence)
+                
+                if len(processed_chunks) >= 150:
                     break
             
-            # Adiciona último chunk se significativo
-            if current_chunk and len(' '.join(current_chunk)) > 100:
-                processed_chunks.append(' '.join(current_chunk))
+            if current_chunk:
+                chunk_text = '. '.join(current_chunk) + '.'
+                if len(chunk_text) > 100:
+                    contextualized = f"[SECAO: CONTEUDO_FINAL]\n{chunk_text}"
+                    processed_chunks.append(contextualized)
         
-        logger.info(f" Criados {len(processed_chunks)} chunks otimizados")
+        # Verificação final
+        final_chunks = []
+        for chunk in processed_chunks:
+            if len(chunk) >= 100:
+                chunk = re.sub(r' +', ' ', chunk)
+                chunk = re.sub(r'\n ', '\n', chunk)
+                final_chunks.append(chunk.strip())
         
-        # Log de estatísticas para debug
-        if processed_chunks:
-            avg_length = sum(len(chunk) for chunk in processed_chunks) / len(processed_chunks)
-            min_length = min(len(chunk) for chunk in processed_chunks)
-            max_length = max(len(chunk) for chunk in processed_chunks)
-            logger.info(f"Chunks - Média: {avg_length:.0f}, Min: {min_length}, Max: {max_length}")
+        logger.info(f"Criados {len(final_chunks)} chunks com contexto")
         
-        return processed_chunks
+        if final_chunks:
+            chunks_with_context = sum(1 for chunk in final_chunks if '[SECAO:' in chunk)
+            chunks_with_names = sum(1 for chunk in final_chunks if 'NOME_PRINCIPAL' in chunk)
+            
+            logger.info(f"Qualidade contextual - Com contexto: {chunks_with_context}, Com nomes: {chunks_with_names}")
+        
+        return final_chunks
         
     except Exception as e:
-        logger.error(f" Erro ao criar chunks: {e}")
+        logger.error(f"Erro ao criar chunks contextuais: {e}")
         
         # Fallback de emergência
-        words = text.split()[:3000]  # Limita palavras de emergência
+        words = text.split()[:3000]
         emergency_chunks = []
         current_chunk = []
         
@@ -248,29 +320,30 @@ def create_text_chunks(text: str, chunk_size: int = 1000, overlap: int = 150) ->
             current_chunk.append(word)
             if len(' '.join(current_chunk)) > 800:
                 chunk_text = ' '.join(current_chunk)
-                if len(chunk_text) > 80:
-                    emergency_chunks.append(chunk_text)
-                current_chunk = current_chunk[-10:]  # Mantém overlap
+                if len(chunk_text) > 100:
+                    contextualized = f"[SECAO: EMERGENCIA]\n{chunk_text}"
+                    emergency_chunks.append(contextualized)
+                current_chunk = current_chunk[-10:]
                 
             if len(emergency_chunks) >= 100:
                 break
         
-        # Último chunk de emergência
         if current_chunk:
             chunk_text = ' '.join(current_chunk)
-            if len(chunk_text) > 80:
-                emergency_chunks.append(chunk_text)
+            if len(chunk_text) > 100:
+                contextualized = f"[SECAO: EMERGENCIA_FINAL]\n{chunk_text}"
+                emergency_chunks.append(contextualized)
         
-        logger.info(f" Fallback de emergência: {len(emergency_chunks)} chunks")
+        logger.info(f"Fallback de emergência contextual: {len(emergency_chunks)} chunks")
         return emergency_chunks
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def upload_file(
     file: UploadFile = File(...),
-    user_email: Optional[str] = Form(default=DEFAULT_USER_EMAIL)  # MODIFICADO: Aceita user_email
+    user_email: Optional[str] = Form(default=DEFAULT_USER_EMAIL)
 ):
     """
-    Upload e processamento de PDF com sistema de sessões
+    Upload e processamento de PDF com chunks contextuais
     """
     # Validações
     if not file.filename.lower().endswith('.pdf'):
@@ -279,7 +352,6 @@ async def upload_file(
             detail="Apenas arquivos PDF são aceitos"
         )
 
-    # MODIFICADO: Usa user_email fornecido ou padrão
     current_user_email = user_email or DEFAULT_USER_EMAIL
     
     file_path = None
@@ -289,14 +361,13 @@ async def upload_file(
         file_id = f"{datetime.now().strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
         file_path = os.path.join(UPLOAD_DIR, f"{file_id}_{file.filename}")
         
-        # Salva arquivo com verificação adicional
+        # Salva arquivo
         file_size = 0
         try:
             with open(file_path, "wb") as buffer:
                 while chunk := await file.read(8192):
                     file_size += len(chunk)
                     if file_size > MAX_FILE_SIZE:
-                        # Remove arquivo se muito grande
                         try:
                             os.remove(file_path)
                         except:
@@ -307,15 +378,13 @@ async def upload_file(
                         )
                     buffer.write(chunk)
                     
-            logger.info(f" Arquivo salvo: {file_path} ({file_size:,} bytes) - Usuário: {current_user_email}")
+            logger.info(f"Arquivo salvo: {file_path} ({file_size:,} bytes) - Usuário: {current_user_email}")
             
-            # Verifica se o arquivo foi realmente criado
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"Arquivo não foi criado: {file_path}")
                 
         except Exception as save_error:
-            logger.error(f" Erro ao salvar arquivo: {save_error}")
-            # Tenta remover arquivo parcial
+            logger.error(f"Erro ao salvar arquivo: {save_error}")
             try:
                 if os.path.exists(file_path):
                     os.remove(file_path)
@@ -326,15 +395,15 @@ async def upload_file(
                 detail=f"Erro ao salvar arquivo: {str(save_error)}"
             )
         
-        # Processa PDF com melhorias
-        logger.info(f" Iniciando processamento do PDF...")
+        # Processa PDF com contexto estrutural
+        logger.info(f"Iniciando processamento contextual do PDF...")
         text_content = extract_text_from_pdf(file_path)
         
-        logger.info(f" Gerando resumo...")
+        logger.info(f"Gerando resumo...")
         summary = generate_summary(text_content, file.filename)
         
-        logger.info(f" Criando chunks...")
-        chunks = create_text_chunks(text_content)
+        logger.info(f"Criando chunks contextuais...")
+        chunks = create_text_chunks_with_context(text_content)
         
         if not chunks:
             raise ValueError("Nenhum chunk criado - arquivo pode estar vazio ou corrompido")
@@ -342,25 +411,24 @@ async def upload_file(
         # Salva chunks no chat.py
         try:
             from routes.chat import save_text_chunks
-            save_success = save_text_chunks(file_id, chunks, current_user_email)  # MODIFICADO: Passa user_email
+            save_success = save_text_chunks(file_id, chunks, current_user_email)
             if save_success:
-                logger.info(f" Chunks salvos no sistema de chat para usuário: {current_user_email}")
+                logger.info(f"Chunks contextuais salvos no sistema de chat para usuário: {current_user_email}")
             else:
-                logger.warning(f" Falha ao salvar chunks no sistema de chat")
+                logger.warning(f"Falha ao salvar chunks no sistema de chat")
         except Exception as e:
-            logger.error(f" Erro ao salvar chunks: {e}")
-            # Não falha o upload por causa disso, mas registra o erro
+            logger.error(f"Erro ao salvar chunks: {e}")
         
-        # Remove arquivo físico após processamento (economia de espaço)
+        # Remove arquivo físico após processamento
         try:
             os.remove(file_path)
-            logger.info(f" Arquivo físico removido: {file_path}")
+            logger.info(f"Arquivo físico removido: {file_path}")
             file_removed = True
         except Exception as e:
-            logger.warning(f" Não foi possível remover arquivo: {e}")
+            logger.warning(f"Não foi possível remover arquivo: {e}")
             file_removed = False
         
-        # MODIFICADO: Salva dados do arquivo usando user_email como chave
+        # Salva dados do arquivo usando user_email como chave
         if current_user_email not in user_files_data:
             user_files_data[current_user_email] = {}
         
@@ -374,16 +442,18 @@ async def upload_file(
             'text_length': len(text_content),
             'file_removed': file_removed,
             'processing_stats': {
-                'pages_processed': text_content.count('=== Página'),
+                'pages_processed': text_content.count('=== PAGINA'),
                 'avg_chunk_size': sum(len(chunk) for chunk in chunks) // len(chunks) if chunks else 0,
                 'min_chunk_size': min(len(chunk) for chunk in chunks) if chunks else 0,
-                'max_chunk_size': max(len(chunk) for chunk in chunks) if chunks else 0
+                'max_chunk_size': max(len(chunk) for chunk in chunks) if chunks else 0,
+                'chunks_with_numbers': sum(1 for chunk in chunks if re.search(r'\d+', chunk)),
+                'processing_contextual': True
             }
         }
         
         save_user_files_data()
         
-        logger.info(f" Processamento concluído: {file.filename} para usuário: {current_user_email}")
+        logger.info(f"Processamento contextual concluído: {file.filename} para usuário: {current_user_email}")
         
         return {
             "file_id": file_id,
@@ -393,13 +463,20 @@ async def upload_file(
             "chunks_created": len(chunks),
             "upload_date": datetime.now().isoformat(),
             "status": "success",
-            "message": f"✅ Arquivo '{file.filename}' processado com sucesso!",
+            "message": f"Arquivo '{file.filename}' processado com contexto estrutural!",
             "file_removed": file_removed,
-            "user_email": current_user_email,  # NOVO: Retorna o user_email usado
+            "user_email": current_user_email,
             "processing_stats": {
-                "pages_processed": text_content.count('=== Página'),
+                "pages_processed": text_content.count('=== PAGINA'),
                 "text_length": len(text_content),
-                "avg_chunk_size": sum(len(chunk) for chunk in chunks) // len(chunks) if chunks else 0
+                "avg_chunk_size": sum(len(chunk) for chunk in chunks) // len(chunks) if chunks else 0,
+                "chunks_with_numbers": sum(1 for chunk in chunks if re.search(r'\d+', chunk)),
+                "processing_contextual": True,
+                "quality_indicators": {
+                    "chunks_with_content": len([c for c in chunks if len(c) > 200]),
+                    "chunks_with_structure": len([c for c in chunks if ':' in c or '(' in c]),
+                    "text_coverage": round((len(''.join(chunks)) / len(text_content)) * 100, 1)
+                }
             }
         }
         
@@ -413,10 +490,10 @@ async def upload_file(
             except:
                 pass
             
-        logger.error(f" Erro no processamento: {str(e)}", exc_info=True)
+        logger.error(f"Erro no processamento contextual: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Falha no processamento: {str(e)}"
+            detail=f"Falha no processamento contextual: {str(e)}"
         )
 
 @router.get("/user-files")
@@ -438,7 +515,8 @@ async def get_user_files(user_email: Optional[str] = DEFAULT_USER_EMAIL):
             "file_size": file_data["file_size"],
             "chunks_count": file_data.get("chunks_count", 0),
             "file_removed": file_data.get("file_removed", False),
-            "processing_stats": file_data.get("processing_stats", {})
+            "processing_stats": file_data.get("processing_stats", {}),
+            "processing_contextual": file_data.get("processing_stats", {}).get("processing_contextual", False)
         })
     
     return {"files": files, "user_email": current_user_email}
@@ -461,7 +539,7 @@ async def delete_file(file_id: str, user_email: Optional[str] = DEFAULT_USER_EMA
         # Remove arquivo físico se ainda existir
         if file_data.get("file_path") and os.path.exists(file_data["file_path"]):
             os.remove(file_data["file_path"])
-            logger.info(f" Arquivo físico removido")
+            logger.info(f"Arquivo físico removido")
         
         # Remove chunks do sistema de chat
         try:
@@ -469,15 +547,15 @@ async def delete_file(file_id: str, user_email: Optional[str] = DEFAULT_USER_EMA
             storage_key = f"{current_user_email}_{file_id}"
             if storage_key in text_storage:
                 del text_storage[storage_key]
-                logger.info(f" Chunks removidos do chat")
+                logger.info(f"Chunks removidos do chat")
         except Exception as e:
-            logger.warning(f" Erro ao remover chunks do chat: {e}")
+            logger.warning(f"Erro ao remover chunks do chat: {e}")
         
         # Remove dados do arquivo
         del user_files_data[current_user_email][file_id]
         save_user_files_data()
         
-        logger.info(f" Arquivo {file_id} removido completamente para usuário: {current_user_email}")
+        logger.info(f"Arquivo {file_id} removido completamente para usuário: {current_user_email}")
         
         return {
             "success": True, 
@@ -487,7 +565,7 @@ async def delete_file(file_id: str, user_email: Optional[str] = DEFAULT_USER_EMA
         }
         
     except Exception as e:
-        logger.error(f" Erro ao remover arquivo: {e}")
+        logger.error(f"Erro ao remover arquivo: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro ao remover arquivo"
@@ -502,10 +580,13 @@ async def upload_status():
     # Estatísticas dos arquivos
     total_files = 0
     total_chunks = 0
+    contextual_files = 0
     for user_data in user_files_data.values():
         total_files += len(user_data)
         for file_data in user_data.values():
             total_chunks += file_data.get("chunks_count", 0)
+            if file_data.get("processing_stats", {}).get("processing_contextual", False):
+                contextual_files += 1
     
     response = {
         "status": "ok" if groq_status else "partial",
@@ -514,7 +595,8 @@ async def upload_status():
             "pdf_processing": True,
             "text_chunking": True,
             "upload_directory": os.path.exists(UPLOAD_DIR),
-            "session_isolation": True  # NOVO: Indica suporte a sessões
+            "session_isolation": True,
+            "contextual_processing": True
         },
         "details": {
             "groq_model": "llama3-8b-8192" if groq_status else "Não disponível",
@@ -522,14 +604,20 @@ async def upload_status():
             "upload_directory": UPLOAD_DIR,
             "total_files_processed": total_files,
             "total_chunks_created": total_chunks,
-            "total_users": len(user_files_data),  # NOVO: Total de usuários únicos
+            "total_users": len(user_files_data),
+            "contextual_files": contextual_files,
+            "contextualization_rate": round((contextual_files / max(total_files, 1)) * 100, 1),
             "improvements": [
-                "chunks_otimizados",
-                "processamento_melhorado", 
+                "chunks_contextuais_inteligentes",
+                "processamento_estrutural_preservado", 
+                "identificacao_automatica_campos",
                 "remocao_automatica_arquivos",
                 "estatisticas_detalhadas",
                 "tratamento_robusto_erros",
-                "isolamento_por_sessao"  # NOVO
+                "isolamento_por_sessao",
+                "quebras_naturais_texto",
+                "overlap_inteligente",
+                "qualidade_conteudo_melhorada"
             ]
         }
     }
