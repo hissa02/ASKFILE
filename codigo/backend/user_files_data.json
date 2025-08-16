@@ -317,6 +317,128 @@
         "min_chunk_size": 169,
         "max_chunk_size": 991
       }
+    },
+    "20250816_c892500e": {
+      "original_name": "Codigos_fontes.pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento \"Codigos_fontes.pdf\" é um arquivo de diagramas de casos de uso (Use Cases) em formato de linguagem de modelagem de sistemas de processos (PlantUML). O objetivo principal do documento é apresentar os principais fluxos de trabalho e interações entre os usuários e os sistemas.\n\nO documento é dividido em cinco seções, cada uma abordando um tópico específico: Avaliar Resposta, Cadastro e Login, Gerenciar Resoluções, Histórico e Fazer Pergunta. Cada seção apresenta diagramas de casos de uso que descrevem as interações entre os usuários e os sistemas, bem como as relações entre as diferentes funcionalidades.\n\nOs dados importantes apresentados no documento incluem a criação de contas, login, avaliação de respostas, gerenciamento de resoluções, histórico de perguntas e respostas, e processamento de perguntas. Além disso, o documento destaca a importância da validação de dados e credenciais, bem como a necessidade de atualizar a base vetorial e consultar a Linguagem de Linguagem de Linguagem (LLM).\n\nEm conclusão, o documento \"Codigos_fontes.pdf\" é uma ferramenta útil para entender os principais fluxos de trabalho e interações entre os usuários e os sistemas. Ele destaca a importância da validação de dados e credenciais, bem como a necessidade de atualizar a base vetorial e consultar a LLM. Além disso, o documento pode ser útil para consultas futuras, permitindo que os desenvolvedores e os usuários entenda melhor como os sistemas funcionam e como podem ser melhorados.",
+      "upload_date": "2025-08-16T03:22:32.701268",
+      "file_size": 49911,
+      "chunks_count": 6,
+      "text_length": 1919,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 2,
+        "avg_chunk_size": 1012,
+        "min_chunk_size": 870,
+        "max_chunk_size": 1160,
+        "chunks_with_numbers": 6,
+        "processing_optimized": true
+      }
+    },
+    "20250816_6a097de9": {
+      "original_name": "ConsultAI-Declaracao_de_Autoria_e_Titularidade.pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento \"ConsultAI-Declaracao_de_Autoria_e_Titularidade.pdf\" é uma declaração de autoria e titularidade de um programa de computador intitulado ConsultAI, emitida pela Diretoria de Pesquisa e Inovação Tecnológica da Universidade Federal do Maranhão.\n\nO objetivo principal do documento é declarar a autoria do programa de computador e a titularidade dos direitos patrimoniais, que pertencem à Universidade Federal do Maranhão, de acordo com a Lei n° 9.209/1998.\n\nO documento aborda os seguintes tópicos: a declaração de autoria do programa de computador, a data de criação do programa (30 de junho de 2025) e a titularidade dos direitos patrimoniais. Além disso, o documento menciona a Lei n° 9.209/1998, que regula a propriedade intelectual no Brasil.\n\nOs dados importantes incluem a data de criação do programa (30 de junho de 2025) e a titularidade dos direitos patrimoniais da Universidade Federal do Maranhão. Conclusivamente, o documento é uma declaração oficial da autoria e titularidade do programa de computador ConsultAI, emitida pela Universidade Federal do Maranhão.\n\nInformações úteis para consultas futuras:\n\n* Data de criação do programa: 30 de junho de 2025\n* Titularidade dos direitos patrimoniais: Universidade Federal do Maranhão\n* Lei que regula a propriedade intelectual: Lei n° 9.209/1998\n* Entidade responsável pela emissão do documento: Diretoria de Pesquisa e Inovação Tecnológica da Universidade Federal do Maranhão",
+      "upload_date": "2025-08-16T03:22:50.978829",
+      "file_size": 273180,
+      "chunks_count": 2,
+      "text_length": 694,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 1,
+        "avg_chunk_size": 681,
+        "min_chunk_size": 673,
+        "max_chunk_size": 690,
+        "chunks_with_numbers": 2,
+        "processing_optimized": true
+      }
+    },
+    "20250816_a23b1adb": {
+      "original_name": "ConsultAI-Declaracao_de_Autoria_e_Titularidade.pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento \"ConsultAI-Declaracao_de_Autoria_e_Titularidade.pdf\" é uma declaração de autoria e titularidade de um programa de computador chamado ConsultAI, emitida pela Diretoria de Pesquisa e Inovação Tecnológica da Universidade Federal do Maranhão.\n\nO objetivo principal do documento é declarar que os autores do programa de computador ConsultAI são os signatários, que criaram o programa em 30 de junho de 2025. Além disso, a declaração afirma que os autores estão cientes de que, de acordo com a Lei n° 9.209/1998, a titularidade dos direitos patrimoniais do programa de computador pertence à Universidade Federal do Maranhão.\n\nOs principais tópicos abordados no documento são a declaração de autoria e titularidade do programa de computador ConsultAI, bem como a referência à Lei n° 9.209/1998 que regula a propriedade intelectual.\n\nOs dados importantes mencionados no documento incluem a data de criação do programa de computador (30 de junho de 2025) e a titularidade dos direitos patrimoniais do programa de computador, que pertence à Universidade Federal do Maranhão.\n\nEm conclusão, o documento é uma declaração de autoria e titularidade de um programa de computador, que destaca a importância da propriedade intelectual e a responsabilidade dos autores em relação à titularidade dos direitos patrimoniais do programa de computador.",
+      "upload_date": "2025-08-16T03:23:36.362702",
+      "file_size": 273180,
+      "chunks_count": 2,
+      "text_length": 694,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 1,
+        "avg_chunk_size": 681,
+        "min_chunk_size": 673,
+        "max_chunk_size": 690,
+        "chunks_with_numbers": 2,
+        "processing_optimized": true
+      }
+    },
+    "20250816_d025704f": {
+      "original_name": "historico_2021052405 (9).pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento é um Histórico Escolar emitido pela Universidade Federal do Maranhão (UFMA) para Hissa Barbara Oliveira, com matrícula 2021052405. O objetivo principal é fornecer informações sobre o histórico acadêmico da estudante, incluindo os componentes curriculares cursados, notas e situações.\n\nO documento é composto por três páginas e aborda os seguintes tópicos: dados pessoais, histórico acadêmico, componentes curriculares cursados e pendentes, e observações. Os principais tópicos abordados incluem a descrição dos componentes curriculares, as notas obtidas e as situações das disciplinas, bem como a verificação de autenticidade e consistência do documento.\n\nOs dados importantes incluem a matrícula da estudante, a data de emissão do documento e o código de verificação. Além disso, o documento destaca que a estudante cumpriu alguns componentes curriculares através de equivalências, o que é mencionado na seção de observações.\n\nEm resumo, o documento é um histórico acadêmico detalhado que fornece informações importantes sobre a trajetória acadêmica da estudante, incluindo os componentes curriculares cursados, notas e situações. O documento também destaca a verificação de autenticidade e consistência, tornando-o uma ferramenta útil para consultas futuras.",
+      "upload_date": "2025-08-16T03:25:17.525438",
+      "file_size": 33700,
+      "chunks_count": 12,
+      "text_length": 10115,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 3,
+        "avg_chunk_size": 978,
+        "min_chunk_size": 450,
+        "max_chunk_size": 1191,
+        "chunks_with_numbers": 12,
+        "processing_optimized": true
+      }
+    },
+    "20250816_510f10ae": {
+      "original_name": "historico_2021052405 (10).pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento é um Histórico Escolar, emitido em 16/08/2025, que apresenta a trajetória acadêmica de Hissa Barbara Oliveira, estudante da Universidade Federal do Maranhão (UFMA). O objetivo principal do documento é fornecer uma visão geral da evolução acadêmica do estudante, incluindo os componentes curriculares cursados, as notas obtidas e as situações em que o estudante se encontra.\n\nO documento é composto por três páginas e aborda vários tópicos, incluindo a apresentação dos dados pessoais do estudante, a lista de componentes curriculares cursados e a situação em que se encontra em relação a cada um deles. As seções mais importantes incluem a lista de componentes curriculares cursados, a situação em que se encontra em relação a cada um deles e as observações finais.\n\nOs dados importantes incluem a lista de componentes curriculares cursados, a situação em que se encontra em relação a cada um deles e as notas obtidas. Além disso, o documento destaca que o estudante tem 3 componentes curriculares pendentes e que ele cumpriu dois componentes curriculares equivalentes. Outro ponto importante é que o estudante tem uma verificação automática de autenticidade e consistência do histórico, tornando dispensável a assinatura da coordenação do curso ou DIOAC.\n\nEm resumo, o documento é um histórico escolar que apresenta a trajetória acadêmica de Hissa Barbara Oliveira, estudante da UFMA. Ele aborda vários tópicos importantes, incluindo a lista de componentes curriculares cursados, a situação em que se encontra em relação a cada um deles e as notas obtidas. Os dados importantes incluem a lista de componentes curriculares pendentes e a verificação automática de autenticidade e consistência do histórico.",
+      "upload_date": "2025-08-16T03:52:27.982674",
+      "file_size": 33678,
+      "chunks_count": 45,
+      "text_length": 10196,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 3,
+        "avg_chunk_size": 271,
+        "min_chunk_size": 100,
+        "max_chunk_size": 755,
+        "chunks_with_numbers": 45,
+        "processing_contextual": true
+      }
+    },
+    "20250816_a7dbaed5": {
+      "original_name": "historico_2021052405 (10).pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento é um histórico escolar emitido pela Pró-Reitoria de Ensino (PROEN) da Universidade Federal do Maranhão (UFMA), com o objetivo de registrar a evolução acadêmica de Hissa Barbara Oliveira, estudante de Ciência e Tecnologia.\n\nO documento aborda os principais componentes curriculares cursados e cursando pela estudante, incluindo disciplinas como Química Geral e Inorgânica, Física Experimental, Mecânica dos Sólidos, Laboratório de Programação e Engenharia de Software. Além disso, o documento apresenta as notas e situações acadêmicas da estudante em cada componente curricular.\n\nOs dados importantes incluem a matrícula da estudante (2021052405), a data de emissão do documento (16/08/2025 às 03:31h) e o código de verificação (bb0aec99ab). Além disso, o documento destaca que a estudante utilizou bonificação e que o prazo máximo para conclusão do curso é 2026.1.\n\nConclusões:\n\nO documento histórico escolar é uma ferramenta importante para a avaliação da evolução acadêmica de Hissa Barbara Oliveira. Os dados apresentados permitem uma visão geral da trajetória acadêmica da estudante, incluindo as disciplinas cursadas, as notas obtidas e as situações acadêmicas. Além disso, o documento destaca a importância da utilização de bonificação e do prazo máximo para conclusão do curso.",
+      "upload_date": "2025-08-16T04:28:10.844374",
+      "file_size": 33678,
+      "chunks_count": 13,
+      "text_length": 10134,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 3,
+        "avg_chunk_size": 889,
+        "min_chunk_size": 425,
+        "max_chunk_size": 984
+      }
+    },
+    "20250816_76c560d0": {
+      "original_name": "historico_2021052405 (9).pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento é um histórico escolar emitido pela Pró-Reitoria de Ensino (PROEN) da Universidade Federal do Maranhão (UFMA), com o objetivo de registrar a trajetória acadêmica de Hissa Barbara Oliveira, aluno do curso de Ciência e Tecnologia - Bacharelado em Ciência e Tecnologia.\n\nO documento aborda os principais componentes curriculares cursados e cursando, incluindo disciplinas como Química Geral e Inorgânica, Física Experimental, Mecânica dos Sólidos, Engenharia de Software e outros. Além disso, o documento apresenta as notas e situações acadêmicas dos componentes curriculares, bem como as datas de início e fim do curso.\n\nOs dados importantes incluem a matrícula do aluno (2021052405), a data de emissão do documento (13/08/2025) e o código de verificação (b9d832bd11). Além disso, o documento destaca a aprovação do aluno em várias disciplinas, com notas médias acima de 7,0, e a situação acadêmica do aluno como \"ativo\" no curso.\n\nEm resumo, o documento é um histórico escolar que registra a trajetória acadêmica de Hissa Barbara Oliveira, aluno do curso de Ciência e Tecnologia - Bacharelado em Ciência e Tecnologia da Universidade Federal do Maranhão. O documento apresenta os principais componentes curriculares cursados e cursando, notas e situações acadêmicas, e é importante para consultas futuras.",
+      "upload_date": "2025-08-16T04:30:42.353345",
+      "file_size": 33700,
+      "chunks_count": 13,
+      "text_length": 10132,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 3,
+        "avg_chunk_size": 889,
+        "min_chunk_size": 425,
+        "max_chunk_size": 984
+      }
     }
   }
 }

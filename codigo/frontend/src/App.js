@@ -179,13 +179,13 @@ const AskFileSystem = () => {
     setFileProcessing(true);
 
     try {
-      console.log('Enviando upload para:', `${API_BASE_URL}/api/upload`);
+      console.log('Enviando upload para:', `${API_BASE_URL}/api/upload/`);
       
       const formData = new FormData();
       formData.append('file', file);
       formData.append('user_email', defaultUser.email);
 
-      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+      const response = await fetch(`${API_BASE_URL}/api/upload/`, {
         method: 'POST',
         mode: 'cors',
         body: formData,
