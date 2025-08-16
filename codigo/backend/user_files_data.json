@@ -407,6 +407,38 @@
         "chunks_with_numbers": 45,
         "processing_contextual": true
       }
+    },
+    "20250816_a7dbaed5": {
+      "original_name": "historico_2021052405 (10).pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento é um histórico escolar emitido pela Pró-Reitoria de Ensino (PROEN) da Universidade Federal do Maranhão (UFMA), com o objetivo de registrar a evolução acadêmica de Hissa Barbara Oliveira, estudante de Ciência e Tecnologia.\n\nO documento aborda os principais componentes curriculares cursados e cursando pela estudante, incluindo disciplinas como Química Geral e Inorgânica, Física Experimental, Mecânica dos Sólidos, Laboratório de Programação e Engenharia de Software. Além disso, o documento apresenta as notas e situações acadêmicas da estudante em cada componente curricular.\n\nOs dados importantes incluem a matrícula da estudante (2021052405), a data de emissão do documento (16/08/2025 às 03:31h) e o código de verificação (bb0aec99ab). Além disso, o documento destaca que a estudante utilizou bonificação e que o prazo máximo para conclusão do curso é 2026.1.\n\nConclusões:\n\nO documento histórico escolar é uma ferramenta importante para a avaliação da evolução acadêmica de Hissa Barbara Oliveira. Os dados apresentados permitem uma visão geral da trajetória acadêmica da estudante, incluindo as disciplinas cursadas, as notas obtidas e as situações acadêmicas. Além disso, o documento destaca a importância da utilização de bonificação e do prazo máximo para conclusão do curso.",
+      "upload_date": "2025-08-16T04:28:10.844374",
+      "file_size": 33678,
+      "chunks_count": 13,
+      "text_length": 10134,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 3,
+        "avg_chunk_size": 889,
+        "min_chunk_size": 425,
+        "max_chunk_size": 984
+      }
+    },
+    "20250816_76c560d0": {
+      "original_name": "historico_2021052405 (9).pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento é um histórico escolar emitido pela Pró-Reitoria de Ensino (PROEN) da Universidade Federal do Maranhão (UFMA), com o objetivo de registrar a trajetória acadêmica de Hissa Barbara Oliveira, aluno do curso de Ciência e Tecnologia - Bacharelado em Ciência e Tecnologia.\n\nO documento aborda os principais componentes curriculares cursados e cursando, incluindo disciplinas como Química Geral e Inorgânica, Física Experimental, Mecânica dos Sólidos, Engenharia de Software e outros. Além disso, o documento apresenta as notas e situações acadêmicas dos componentes curriculares, bem como as datas de início e fim do curso.\n\nOs dados importantes incluem a matrícula do aluno (2021052405), a data de emissão do documento (13/08/2025) e o código de verificação (b9d832bd11). Além disso, o documento destaca a aprovação do aluno em várias disciplinas, com notas médias acima de 7,0, e a situação acadêmica do aluno como \"ativo\" no curso.\n\nEm resumo, o documento é um histórico escolar que registra a trajetória acadêmica de Hissa Barbara Oliveira, aluno do curso de Ciência e Tecnologia - Bacharelado em Ciência e Tecnologia da Universidade Federal do Maranhão. O documento apresenta os principais componentes curriculares cursados e cursando, notas e situações acadêmicas, e é importante para consultas futuras.",
+      "upload_date": "2025-08-16T04:30:42.353345",
+      "file_size": 33700,
+      "chunks_count": 13,
+      "text_length": 10132,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 3,
+        "avg_chunk_size": 889,
+        "min_chunk_size": 425,
+        "max_chunk_size": 984
+      }
     }
   }
 }
