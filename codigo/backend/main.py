@@ -27,6 +27,7 @@ app.add_middleware(
         "https://*.vercel.app",
         "https://askfile.onrender.com"
     ],
+    allow_origin_regex="https://.*\.vercel\.app",  # ADICIONAR ESTA LINHA
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
