@@ -285,6 +285,38 @@
         "min_chunk_size": 169,
         "max_chunk_size": 991
       }
+    },
+    "20250815_e3877ccb": {
+      "original_name": "Codigos_fontes.pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO arquivo \"Codigos_fontes.pdf\" é um documento que apresenta um modelo de análise de requisitos de sistema, utilizando a linguagem de modelagem de requisitos UML (Unified Modeling Language). O objetivo principal do documento é descrever e analisar as funcionalidades e comportamentos do sistema, identificando as principais interações entre os usuários e os componentes do sistema.\n\nAs principais seções do documento abordam as seguintes tópicos: Avaliar Resposta, Cadastro e Login, Gerenciar Resoluções, Histórico, e Fazer Pergunta. Cada seção apresenta um diagrama de uso caso (Use Case Diagram) que descreve as interações entre os usuários e os componentes do sistema, bem como as relações entre as diferentes funcionalidades.\n\nAlguns dados importantes destacados no documento incluem a presença de funcionalidades de avaliação de respostas, cadastro e login, gerenciamento de resoluções, histórico de conversas e pergunta. Além disso, o documento destaca a importância da integração com base vetorial e LLM (Large Language Model) para processar perguntas e respostas.\n\nEm resumo, o documento \"Codigos_fontes.pdf\" é uma análise de requisitos de sistema que apresenta um modelo de UML para descrever as funcionalidades e comportamentos do sistema. O documento é útil para consultas futuras, pois fornece uma visão geral das principais interações entre os usuários e os componentes do sistema, bem como a estrutura e a lógica do sistema.",
+      "upload_date": "2025-08-15T20:39:23.603761",
+      "file_size": 49911,
+      "chunks_count": 6,
+      "text_length": 1921,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 2,
+        "avg_chunk_size": 687,
+        "min_chunk_size": 169,
+        "max_chunk_size": 991
+      }
+    },
+    "20250816_123838dc": {
+      "original_name": "Codigos_fontes.pdf",
+      "file_path": null,
+      "summary": "Resumo:\n\nO documento \"Codigos_fontes.pdf\" é um arquivo de diagrama de fluxo de processos (use cases) que descreve o funcionamento de um sistema de avaliação de respostas. O objetivo principal do documento é apresentar as principais funcionalidades e interações entre os usuários e o sistema.\n\nAs principais seções abordadas no documento incluem: Avaliar Resposta, Cadastro e Login, Gerenciar Resoluções, Histórico, e Fazer Pergunta. Cada seção apresenta diagramas de fluxo de processos que detalham as etapas e interações envolvidas em cada funcionalidade.\n\nAlguns dados importantes destacados no documento incluem a possibilidade de avaliar respostas de forma positiva ou negativa, a opção de login com Google, a capacidade de gerenciar resoluções e histórico de perguntas e respostas. Além disso, o documento destaca a importância da validação de dados e credenciais para garantir a segurança do sistema.\n\nEm resumo, o documento \"Codigos_fontes.pdf\" é uma ferramenta útil para entender o funcionamento de um sistema de avaliação de respostas e suas principais funcionalidades. Ele pode ser utilizado como referência para consultas futuras e para implementar melhorias no sistema.",
+      "upload_date": "2025-08-16T02:57:41.222551",
+      "file_size": 49911,
+      "chunks_count": 6,
+      "text_length": 1921,
+      "file_removed": true,
+      "processing_stats": {
+        "pages_processed": 2,
+        "avg_chunk_size": 687,
+        "min_chunk_size": 169,
+        "max_chunk_size": 991
+      }
     }
   }
 }
