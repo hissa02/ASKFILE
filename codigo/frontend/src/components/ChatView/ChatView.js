@@ -157,7 +157,7 @@ const ChatView = ({
                   <div className="upload-notice" style={{marginTop: '1rem', backgroundColor: '#f0f9ff', borderColor: '#0891b2'}}>
                     <AlertCircle size={16} className="notice-icon" style={{color: '#0891b2'}} />
                     <p style={{color: '#0c4a6e'}}>
-                      <strong>Requisitos:</strong> Arquivos PDF com texto (máx. 50MB). PDFs apenas com imagens não são suportados.
+                      <strong>Requisitos:</strong> Arquivos PDF com texto (máx. 25MB). PDFs apenas com imagens não são suportados.
                     </p>
                   </div>
                 </div>
