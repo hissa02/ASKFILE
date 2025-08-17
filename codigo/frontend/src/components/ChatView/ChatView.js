@@ -47,7 +47,7 @@ const ChatView = ({
     const file = event.target.files[0];
     if (file) {
       if (file.type !== 'application/pdf') {
-        alert('Apenas arquivos PDF são aceitos!\n\nRequisitos:\n• Formato: PDF\n• Tamanho máximo: 50MB\n• Conteúdo: Texto (não apenas imagens)\n\nPrivacidade: O arquivo será processado e removido do servidor automaticamente.');
+        alert('Apenas arquivos PDF são aceitos!\n\nRequisitos:\n• Formato: PDF\n• Tamanho máximo: 25MB\n• Conteúdo: Texto (não apenas imagens)\n\nPrivacidade: O arquivo será processado e removido do servidor automaticamente.');
         return;
       }
       handleFileUpload(file);
